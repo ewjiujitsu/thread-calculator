@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thread Calculator — ISO M &amp; Unified UN</title>
+<style>
+:root{
+  --bg:#12151a; --panel:#1a1f27; --panel2:#20262f; --line:#2c3542;
+  --ink:#e6ebf2; --dim:#8fa0b5; --accent:#5ac8fa; --accent2:#7ee081;
+  --warn:#ffb454; --err:#ff6b6b; --mono:"Consolas","SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{background:linear-gradient(90deg,#1c2430,#141a22);border-bottom:1px solid var(--line);
+  padding:14px 20px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px;letter-spacing:.4px}
+.badge{font:11px var(--mono);background:#243040;color:var(--accent);padding:3px 8px;border-radius:10px;border:1px solid #2f3f52}
+.sub{color:var(--dim);font-size:12px}
+main{max-width:1560px;margin:0 auto;padding:18px 20px 60px;display:grid;grid-template-columns:392px 1fr;gap:18px;align-items:start}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:16px;overflow:hidden}
+h2{margin:0;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);
+  padding:9px 13px;background:var(--panel2);border-bottom:1px solid var(--line);font-weight:600}
+h2 .n{color:var(--accent);margin-right:7px;font-family:var(--mono)}
+.body{padding:13px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:11px;color:var(--dim);letter-spacing:.3px}
+input,select{background:#0e1218;border:1px solid #333f4e;color:var(--ink);padding:6px 8px;border-radius:5px;font:13px var(--mono);width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.field.na input,.field.na select{opacity:.35;pointer-events:none}
+.na{opacity:.5}
+button{background:#22405c;border:1px solid #33587b;color:#cfe8ff;padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+button:hover{background:#2b5175}
+button.alt{background:#243b2c;border-color:#356b45;color:#cdf0d6}
+button.alt:hover{background:#2e4d38}
+.btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+table{width:100%;border-collapse:collapse;font:12.5px var(--mono)}
+th,td{padding:5px 9px;text-align:right;border-bottom:1px solid #232b36}
+th{color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.4px;text-transform:uppercase;background:#1d232c;text-align:right}
+th:first-child,td:first-child{text-align:left}
+td.lab{color:var(--dim);font-family:"Segoe UI",sans-serif;font-size:12.5px}
+tr.grp td{background:#1b222b;color:var(--accent);font-weight:600;font-family:"Segoe UI",sans-serif;
+  letter-spacing:.4px;font-size:11.5px;text-transform:uppercase;padding:7px 9px}
+td.max{color:#9fd8ff}td.min{color:#ffcf9f}td.mid{color:var(--ink)}
+.note{font-size:11.5px;color:var(--dim);padding:9px 13px;border-top:1px solid var(--line);background:#161b22;line-height:1.55}
+.note b{color:#b8c6d6}
+.flag{padding:8px 12px;border-radius:5px;margin:9px 0;font-size:12.5px;line-height:1.5}
+.flag.warn{background:#3a2c14;border:1px solid #6b5220;color:#ffd79a}
+.flag.err{background:#3a1a1a;border:1px solid #6b2b2b;color:#ffb3b3}
+.flag.ok{background:#16301f;border:1px solid #2b6b40;color:#b3f0c8}
+.flag.info{background:#152634;border:1px solid #2a4d69;color:#a9d5f0}
+.hint{font-size:11px;color:#6c7d92;margin-top:5px;line-height:1.5}
+.desig{font:20px var(--mono);color:var(--accent2);letter-spacing:1px}
+.pill{display:inline-block;font:11px var(--mono);background:#243040;color:var(--accent);padding:2px 7px;border-radius:9px;border:1px solid #2f3f52;margin-left:6px}
+.pill.src{background:#1d2a1f;color:#9fe0ab;border-color:#2f5236}
+a.rescue{color:var(--accent);font-size:12px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1280px){.cols2{grid-template-columns:1fr}}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);background:var(--panel2)}
+.tabs button{background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;
+  color:var(--dim);font-size:12px;letter-spacing:.6px;text-transform:uppercase;padding:9px 15px;font-weight:600}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);background:#1a222c}
+</style>
+</head>
+<body>
+<header>
+  <h1>Thread Calculator</h1>
+  <span class="badge" id="badge">v2</span>
+  <span class="sub">ISO metric M &amp; Unified inch UN/UNR &middot; tolerances &middot; pre-plating &middot; tapping drills &middot; gauges &middot; Excel</span>
+</header>
+
+<main>
+<!-- ================= LEFT ================= -->
+<div>
+  <section>
+    <div class="tabs" id="sysTabs">
+      <button data-sys="iso" class="on">ISO metric (M)</button>
+      <button data-sys="un">Unified inch (UN)</button>
+    </div>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Standard size (preset)</label>
+        <select id="preset"><option value="">— custom —</option></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label id="lblDnom">Basic major diameter D, d (mm)</label>
+          <input id="dnom" value="14">
+        </div>
+        <div class="field">
+          <label id="lblPitch">Pitch P (mm)</label>
+          <input id="pitch" value="1">
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>Thread type</label>
+          <select id="ttype">
+            <option value="int">Internal</option>
+            <option value="ext">External</option>
+          </select>
+        </div>
+        <div class="field"><label>Starts</label><input id="starts" value="1"></div>
+        <div class="field">
+          <label>Hand</label>
+          <select id="hand"><option value="RH">RH</option><option value="LH">LH</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Display units</label>
+          <select id="dunit"><option value="mm">mm</option><option value="in">inch</option></select>
+        </div>
+        <div class="field">
+          <label>Decimals</label>
+          <select id="dp"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+        </div>
+      </div>
+      <div class="hint" id="sysHint"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>Tolerance class</h2>
+    <div class="body">
+      <!-- ISO class controls -->
+      <div id="isoCls">
+        <div class="row">
+          <div class="field"><label>Pitch &oslash; grade</label><select id="pdGrade"></select></div>
+          <div class="field"><label>Pitch &oslash; position</label><select id="pdPos"></select></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Crest &oslash; grade</label><select id="cdGrade"></select></div>
+          <div class="field"><label>Crest &oslash; position</label><select id="cdPos"></select></div>
+        </div>
+      </div>
+      <!-- UN class controls -->
+      <div id="unCls" style="display:none">
+        <div class="row">
+          <div class="field"><label>Class</label><select id="unClass"></select></div>
+          <div class="field"><label>Form</label>
+            <select id="unForm"><option value="UN">UN (flat or round root)</option><option value="UNR">UNR (rounded root, ext only)</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:9px">
+        <label>Length of thread engagement</label>
+        <select id="engMode">
+          <option value="auto">Auto</option>
+          <option value="man">Manual value</option>
+        </select>
+      </div>
+      <div class="field na" id="engManWrap">
+        <label id="lblEngMan">Engagement length (mm)</label>
+        <input id="engMan" value="10">
+      </div>
+      <div class="hint" id="clsHint"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Pre-plating / coating</h2>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Coating compensation</label>
+        <select id="platMode">
+          <option value="off">Off</option>
+          <option value="after">Class applies AFTER plating &rarr; pre-plate limits</option>
+          <option value="before">Class applies BEFORE plating &rarr; as-plated</option>
+        </select>
+      </div>
+      <div class="row" id="platInputs">
+        <div class="field"><label>Min coating (&micro;m)</label><input id="tmin" value="5"></div>
+        <div class="field"><label>Max coating (&micro;m)</label><input id="tmax" value="12"></div>
+      </div>
+      <div class="hint"><b>4&times; rule:</b> flank coating <i>t</i> moves pitch &oslash; by <b>4t</b>, crest &oslash; by <b>2t</b>
+        (ASME B1.13M &sect;8 / B1.1 &sect;7).</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span>Tapping drill</h2>
+    <div class="body">
+      <div class="row">
+        <div class="field">
+          <label>Target thread engagement (%)</label>
+          <input id="pctThread" value="75">
+        </div>
+        <div class="field">
+          <label>Drill set</label>
+          <select id="drillSet">
+            <option value="metric">Metric 0,05/0,1 mm</option>
+            <option value="inch">Inch: fraction / number / letter</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint"><b>100 % of thread = 0,75 H</b> (FED-STD-H28/2B Table II.A.1 note 1),
+        so hole = D &minus; (%/100) &times; 1,299038 &times; P.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span>Gauge &amp; inspection options</h2>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Wire / ball measurement</label>
+        <select id="leadCorr">
+          <option value="off">Best-wire formula, no lead-angle correction</option>
+          <option value="on">Apply lead-angle correction (Machinery's Handbook)</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:9px">
+        <label>Wire diameter</label>
+        <select id="wireMode">
+          <option value="best">Best size = 0,57735 &times; P</option>
+          <option value="man">Manual</option>
+        </select>
+      </div>
+      <div class="field na" id="wireManWrap">
+        <label id="lblWire">Wire diameter (mm)</label>
+        <input id="wireMan" value="0.866">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Gauge PD tolerance (&micro;m/&micro;in)</label>
+          <input id="gTol" value="">
+        </div>
+        <div class="field">
+          <label>GO gauge wear allow.</label>
+          <input id="gWear" value="">
+        </div>
+      </div>
+      <div class="hint">Gauge tolerance / wear are blank by design — see the note in section 11.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">06</span>Output</h2>
+    <div class="body">
+      <div class="btns">
+        <button id="calc">Compute</button>
+        <button class="alt" id="xlsx">Download Excel (.xlsx)</button>
+        <button class="alt" id="csv">CSV</button>
+      </div>
+      <div id="saveMsg" style="margin-top:9px"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= RIGHT ================= -->
+<div>
+  <section>
+    <h2><span class="n">07</span>Result</h2>
+    <div class="body" id="head"></div>
+    <div id="flags" style="padding:0 13px 4px"></div>
+  </section>
+
+  <div class="cols2">
+    <div>
+      <section>
+        <h2><span class="n">08</span>Diameter limits</h2>
+        <table id="tDia"></table>
+        <div class="note" id="diaNote"></div>
+      </section>
+      <section>
+        <h2><span class="n">09</span>Tapping drill</h2>
+        <table id="tTap"></table>
+        <div class="note" id="tapNote"></div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2><span class="n">10</span>Tolerances &amp; deviations</h2>
+        <table id="tTol"></table>
+      </section>
+      <section>
+        <h2><span class="n">11</span>Gauges &amp; inspection</h2>
+        <table id="tGeo"></table>
+        <div class="note" id="geoNote"></div>
+      </section>
+    </div>
+  </div>
+
+  <section id="platSec" style="display:none">
+    <h2><span class="n">12</span>Pre-plating limits</h2>
+    <table id="tPlat"></table>
+    <div class="note" id="platNote"></div>
+  </section>
+</div>
+</main>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════════════
+   SOURCES AND VERIFICATION STATUS
+   ──────────────────────────────────────────────────────────────────────────────
+   [V] BS ISO 965-1:1998 Tables 1–6  — transcribed verbatim (see note in code).
+   [V] ISO 965-1 clause 11           — Cmax / Cmin / Rmin formulae.
+   [V] ISO 965-3:1998 Table 1        — external minor ø is ONE value:
+                                       deviation = −(|es| + H/6) "for stress calculation".
+                                       Verified: P=0,2 es=−17 → −45,87 ≈ −46 (table).
+   [V] ISO 965-1 + ISO 965-3         — neither tabulates a MAX major ø for internal
+                                       threads. Root-form limited (clause 11).
+   [V] FED-STD-H28/2B Table II.A.1   — "100 % of thread = 0,75 H". Reproduces the
+                                       standard's own percent columns exactly
+                                       (1.750-8 UN min 1.615 → 83,14 % vs 83,1 table).
+   [V] FED-STD-H28/2B tap-drill tbls — UN internal minor ø: D1min = D − 1,082532p,
+                                       TD1 = 0,25p − 0,4p². Checked on 8+ sizes.
+   [C] ASME B1.1 §5 (via H28/2B §5.2.2) — UN tolerance formulae. Not read directly;
+                                       implementation CHECKED against published limits
+                                       for 1/4-20, 3/8-16, 1/2-13, 3/4-10, 1-8 UNC:
+                                       39 of 40 values exact, 1 off by 0,0001 in (table
+                                       rounding).
+   [U] Lead-angle correction         — Machinery's Handbook form. UNVERIFIED against a
+                                       primary standard; sign confirmed from geometry.
+                                       Off by default, labelled in the UI.
+   [U] ISO 1502 gauge tolerances     — Tables 4–9 and clause 13 could NOT be obtained
+                                       (only the 12-page preview). Gauge TARGET sizes
+                                       below follow the Taylor principle and are exact;
+                                       gauge-making tolerance / wear are USER INPUT and
+                                       are left blank rather than invented.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────── ISO 965-1 data (verbatim tables) ─────────────── */
+const FD = {
+  0.2:{G:17,e:null,f:null,g:-17},   0.25:{G:18,e:null,f:null,g:-18},
+  0.3:{G:18,e:null,f:null,g:-18},   0.35:{G:19,e:null,f:-34,g:-19},
+  0.4:{G:19,e:null,f:-34,g:-19},    0.45:{G:20,e:null,f:-35,g:-20},
+  0.5:{G:20,e:-50,f:-36,g:-20},     0.6:{G:21,e:-53,f:-36,g:-21},
+  0.7:{G:22,e:-56,f:-38,g:-22},     0.75:{G:22,e:-56,f:-38,g:-22},
+  0.8:{G:24,e:-60,f:-38,g:-24},     1:{G:26,e:-60,f:-40,g:-26},
+  1.25:{G:28,e:-63,f:-42,g:-28},    1.5:{G:32,e:-67,f:-45,g:-32},
+  1.75:{G:34,e:-71,f:-48,g:-34},    2:{G:38,e:-71,f:-52,g:-38},
+  2.5:{G:42,e:-80,f:-58,g:-42},     3:{G:48,e:-85,f:-63,g:-48},
+  3.5:{G:53,e:-90,f:-70,g:-53},     4:{G:60,e:-95,f:-75,g:-60},
+  4.5:{G:63,e:-100,f:-80,g:-63},    5:{G:71,e:-106,f:-85,g:-71},
+  5.5:{G:75,e:-112,f:-90,g:-75},    6:{G:80,e:-118,f:-95,g:-80},
+  8:{G:100,e:-140,f:-118,g:-100}
+};
+const TD1 = {
+  0.2:[38,null,null,null,null], 0.25:[45,56,null,null,null], 0.3:[53,67,85,null,null],
+  0.35:[63,80,100,null,null],   0.4:[71,90,112,null,null],   0.45:[80,100,125,null,null],
+  0.5:[90,112,140,180,null],    0.6:[100,125,160,200,null],  0.7:[112,140,180,224,null],
+  0.75:[118,150,190,236,null],  0.8:[125,160,200,250,315],   1:[150,190,236,300,375],
+  1.25:[170,212,265,335,425],   1.5:[190,236,300,375,475],   1.75:[212,265,335,425,530],
+  2:[236,300,375,475,600],      2.5:[280,355,450,560,710],   3:[315,400,500,630,800],
+  3.5:[355,450,560,710,900],    4:[375,475,600,750,950],     4.5:[425,530,670,850,1060],
+  5:[450,560,710,900,1120],     5.5:[475,600,750,950,1180],  6:[500,630,800,1000,1250],
+  8:[630,800,1000,1250,1600]
+};
+const TD1_GRADES=[4,5,6,7,8];
+const TDMAJ = {
+  0.2:[36,56,null], 0.25:[42,67,null], 0.3:[48,75,null], 0.35:[53,85,null],
+  0.4:[60,95,null], 0.45:[63,100,null],0.5:[67,106,null],0.6:[80,125,null],
+  0.7:[90,140,null],0.75:[90,140,null],0.8:[95,150,236], 1:[112,180,280],
+  1.25:[132,212,335],1.5:[150,236,375],1.75:[170,265,425],2:[180,280,450],
+  2.5:[212,335,530],3:[236,375,600],  3.5:[265,425,670], 4:[300,475,750],
+  4.5:[315,500,800],5:[335,530,850],  5.5:[355,560,900], 6:[375,600,950],
+  8:[450,710,1180]
+};
+const TDMAJ_GRADES=[4,6,8];
+const DRANGES=[[0.99,1.4],[1.4,2.8],[2.8,5.6],[5.6,11.2],[11.2,22.4],[22.4,45],[45,90],[90,180],[180,355]];
+const TD2=[
+ {0.2:[40,null,null,null,null],0.25:[45,56,null,null,null],0.3:[48,60,75,null,null]},
+ {0.2:[42,null,null,null,null],0.25:[48,60,null,null,null],0.35:[53,67,85,null,null],
+  0.4:[56,71,90,null,null],0.45:[60,75,95,null,null]},
+ {0.35:[56,71,90,null,null],0.5:[63,80,100,125,null],0.6:[71,90,112,140,null],
+  0.7:[75,95,118,150,null],0.75:[75,95,118,150,null],0.8:[80,100,125,160,200]},
+ {0.75:[85,106,132,170,null],1:[95,118,150,190,236],1.25:[100,125,160,200,250],1.5:[112,140,180,224,280]},
+ {1:[100,125,160,200,250],1.25:[112,140,180,224,280],1.5:[118,150,190,236,300],
+  1.75:[125,160,200,250,315],2:[132,170,212,265,335],2.5:[140,180,224,280,355]},
+ {1:[106,132,170,212,null],1.5:[125,160,200,250,315],2:[140,180,224,280,355],
+  3:[170,212,265,335,425],3.5:[180,224,280,355,450],4:[190,236,300,375,475],4.5:[200,250,315,400,500]},
+ {1.5:[132,170,212,265,335],2:[150,190,236,300,375],3:[180,224,280,355,450],
+  4:[200,250,315,400,500],5:[212,265,335,425,530],5.5:[224,280,355,450,560],6:[236,300,375,475,600]},
+ {2:[160,200,250,315,400],3:[190,236,300,375,475],4:[212,265,335,425,530],6:[250,315,400,500,630],8:[280,355,450,560,710]},
+ {3:[212,265,335,425,530],4:[236,300,375,475,600],6:[265,335,425,530,670],8:[300,375,475,600,750]}
+];
+const TD2_GRADES=[4,5,6,7,8];
+const TD2E=[
+ {0.2:[24,30,38,48,null,null,null],0.25:[26,34,42,53,null,null,null],0.3:[28,36,45,56,null,null,null]},
+ {0.2:[25,32,40,50,null,null,null],0.25:[28,36,45,56,null,null,null],0.35:[32,40,50,63,80,null,null],
+  0.4:[34,42,53,67,85,null,null],0.45:[36,45,56,71,90,null,null]},
+ {0.35:[34,42,53,67,85,null,null],0.5:[38,48,60,75,95,null,null],0.6:[42,53,67,85,106,null,null],
+  0.7:[45,56,71,90,112,null,null],0.75:[45,56,71,90,112,null,null],0.8:[48,60,75,95,118,150,190]},
+ {0.75:[50,63,80,100,125,null,null],1:[56,71,90,112,140,180,224],1.25:[60,75,95,118,150,190,236],1.5:[67,85,106,132,170,212,265]},
+ {1:[60,75,95,118,150,190,236],1.25:[67,85,106,132,170,212,265],1.5:[71,90,112,140,180,224,280],
+  1.75:[75,95,118,150,190,236,300],2:[80,100,125,160,200,250,315],2.5:[85,106,132,170,212,265,335]},
+ {1:[63,80,100,125,160,200,250],1.5:[75,95,118,150,190,236,300],2:[85,106,132,170,212,265,335],
+  3:[100,125,160,200,250,315,400],3.5:[106,132,170,212,265,335,425],4:[112,140,180,224,280,355,450],
+  4.5:[118,150,190,236,300,375,475]},
+ {1.5:[80,100,125,160,200,250,315],2:[90,112,140,180,224,280,355],3:[106,132,170,212,265,335,425],
+  4:[118,150,190,236,300,375,475],5:[125,160,200,250,315,400,500],5.5:[132,170,212,265,335,425,530],
+  6:[140,180,224,280,355,450,560]},
+ {2:[95,118,150,190,236,300,375],3:[112,140,180,224,280,355,450],4:[125,160,200,250,315,400,500],
+  6:[150,190,236,300,375,475,600],8:[170,212,265,335,425,530,670]},
+ {3:[125,160,200,250,315,400,500],4:[140,180,224,280,355,450,560],6:[160,200,250,315,400,500,630],
+  8:[180,224,280,355,450,560,710]}
+];
+const TD2E_GRADES=[3,4,5,6,7,8,9];
+const ENG=[
+ {0.2:[0.5,1.4],0.25:[0.6,1.7],0.3:[0.7,2]},
+ {0.2:[0.5,1.5],0.25:[0.6,1.9],0.35:[0.8,2.6],0.4:[1,3],0.45:[1.3,3.8]},
+ {0.35:[1,3],0.5:[1.5,4.5],0.6:[1.7,5],0.7:[2,6],0.75:[2.2,6.7],0.8:[2.5,7.5]},
+ {0.75:[2.4,7.1],1:[3,9],1.25:[4,12],1.5:[5,15]},
+ {1:[3.8,11],1.25:[4.5,13],1.5:[5.6,16],1.75:[6,18],2:[8,24],2.5:[10,30]},
+ {1:[4,12],1.5:[6.3,19],2:[8.5,25],3:[12,36],3.5:[15,45],4:[18,53],4.5:[21,63]},
+ {1.5:[7.5,22],2:[9.5,28],3:[15,45],4:[19,56],5:[24,71],5.5:[28,85],6:[32,95]},
+ {2:[12,36],3:[18,53],4:[24,71],6:[36,106],8:[45,132]},
+ {3:[20,60],4:[26,80],6:[40,118],8:[50,150]}
+];
+const REC_INT={fine:{S:['4H'],N:['5H'],L:['6H']},
+               medium:{S:['5H','(5G)'],N:['6H','6G'],L:['7H','(7G)']},
+               coarse:{S:[],N:['7H','(7G)'],L:['8H','(8G)']}};
+const REC_EXT={fine:{S:['(3h4h)'],N:['4h','(4g)'],L:['(5h4h)','(5g4g)']},
+               medium:{S:['(5h6h)','(5g6g)'],N:['6h','6g','6f','6e'],L:['(7h6h)','(7g6g)','(7e6e)']},
+               coarse:{S:[],N:['8g','(8e)'],L:['(9g8g)','(9e8e)']}};
+const PRESETS=[
+ [1,0.25],[1.2,0.25],[1.4,0.3],[1.6,0.35],[1.8,0.35],[2,0.4],[2.5,0.45],[2.5,0.35],
+ [3,0.5],[3,0.35],[3.5,0.6],[4,0.7],[4,0.5],[5,0.8],[5,0.5],[6,1],[6,0.75],[6,0.5],
+ [7,1],[7,0.75],[8,1.25],[8,1],[8,0.75],[8,0.5],[10,1.5],[10,1.25],[10,1],[10,0.75],
+ [12,1.75],[12,1.5],[12,1.25],[12,1],[14,2],[14,1.5],[14,1.25],[14,1],
+ [16,2],[16,1.5],[16,1],[18,2.5],[18,2],[18,1.5],[18,1],[20,2.5],[20,2],[20,1.5],[20,1],
+ [22,2.5],[22,2],[22,1.5],[22,1],[24,3],[24,2],[24,1.5],[24,1],
+ [27,3],[27,2],[27,1.5],[27,1],[30,3.5],[30,3],[30,2],[30,1.5],[30,1],
+ [33,3.5],[33,3],[33,2],[33,1.5],[36,4],[36,3],[36,2],[36,1.5],
+ [39,4],[39,3],[39,2],[39,1.5],[42,4.5],[42,4],[42,3],[42,2],[42,1.5],
+ [45,4.5],[45,4],[45,3],[45,2],[45,1.5],[48,5],[48,4],[48,3],[48,2],[48,1.5],
+ [52,5],[52,4],[52,3],[52,2],[52,1.5],[56,5.5],[56,4],[56,3],[56,2],[56,1.5],
+ [60,5.5],[60,4],[60,3],[60,2],[60,1.5],[64,6],[64,4],[64,3],[64,2],[64,1.5],
+ [68,6],[68,4],[68,3],[68,2],[72,6],[72,4],[72,3],[72,2],[76,6],[76,4],[76,3],[76,2],
+ [80,6],[80,4],[80,3],[80,2],[90,6],[90,4],[90,3],[90,2],[100,6],[100,4],[100,3],[100,2]
+];
+const COARSE={1:0.25,1.2:0.25,1.4:0.3,1.6:0.35,1.8:0.35,2:0.4,2.5:0.45,3:0.5,3.5:0.6,
+  4:0.7,5:0.8,6:1,7:1,8:1.25,10:1.5,12:1.75,14:2,16:2,18:2.5,20:2.5,22:2.5,24:3,27:3,
+  30:3.5,33:3.5,36:4,39:4,42:4.5,45:4.5,48:5,52:5,56:5.5,60:5.5,64:6,68:6,72:6,76:6,80:6,90:6,100:6};
+
+/* ─────────────── Unified inch (UN) ─────────────── */
+/* Basic major ø of numbered sizes: D = 0,060 + 0,013 N  */
+function numSize(n){ return 0.060 + 0.013*n; }
+const UN_SIZES=[
+ ['#0-80 UNF',numSize(0),80],['#1-64 UNC',numSize(1),64],['#1-72 UNF',numSize(1),72],
+ ['#2-56 UNC',numSize(2),56],['#2-64 UNF',numSize(2),64],['#3-48 UNC',numSize(3),48],
+ ['#3-56 UNF',numSize(3),56],['#4-40 UNC',numSize(4),40],['#4-48 UNF',numSize(4),48],
+ ['#5-40 UNC',numSize(5),40],['#5-44 UNF',numSize(5),44],['#6-32 UNC',numSize(6),32],
+ ['#6-40 UNF',numSize(6),40],['#8-32 UNC',numSize(8),32],['#8-36 UNF',numSize(8),36],
+ ['#10-24 UNC',numSize(10),24],['#10-32 UNF',numSize(10),32],
+ ['#12-24 UNC',numSize(12),24],['#12-28 UNF',numSize(12),28],['#12-32 UNEF',numSize(12),32],
+ ['1/4-20 UNC',0.25,20],['1/4-28 UNF',0.25,28],['1/4-32 UNEF',0.25,32],
+ ['5/16-18 UNC',0.3125,18],['5/16-24 UNF',0.3125,24],['5/16-32 UNEF',0.3125,32],
+ ['3/8-16 UNC',0.375,16],['3/8-24 UNF',0.375,24],['3/8-32 UNEF',0.375,32],
+ ['7/16-14 UNC',0.4375,14],['7/16-20 UNF',0.4375,20],['7/16-28 UNEF',0.4375,28],
+ ['1/2-13 UNC',0.5,13],['1/2-20 UNF',0.5,20],['1/2-28 UNEF',0.5,28],
+ ['9/16-12 UNC',0.5625,12],['9/16-18 UNF',0.5625,18],['9/16-24 UNEF',0.5625,24],
+ ['5/8-11 UNC',0.625,11],['5/8-18 UNF',0.625,18],['5/8-24 UNEF',0.625,24],
+ ['3/4-10 UNC',0.75,10],['3/4-16 UNF',0.75,16],['3/4-20 UNEF',0.75,20],
+ ['7/8-9 UNC',0.875,9],['7/8-14 UNF',0.875,14],['7/8-20 UNEF',0.875,20],
+ ['1-8 UNC',1.0,8],['1-12 UNF',1.0,12],['1-20 UNEF',1.0,20],
+ ['1 1/8-7 UNC',1.125,7],['1 1/8-12 UNF',1.125,12],['1 1/4-7 UNC',1.25,7],['1 1/4-12 UNF',1.25,12],
+ ['1 3/8-6 UNC',1.375,6],['1 3/8-12 UNF',1.375,12],['1 1/2-6 UNC',1.5,6],['1 1/2-12 UNF',1.5,12],
+ ['1 3/4-5 UNC',1.75,5],['2-4 1/2 UNC',2.0,4.5],['2 1/4-4 1/2 UNC',2.25,4.5],
+ ['2 1/2-4 UNC',2.5,4],['2 3/4-4 UNC',2.75,4],['3-4 UNC',3.0,4]
+];
+/* ASME B1.1 §5 — pitch-diameter tolerance of class 2A is the master value */
+function unTd2_2A(D,p,LE){
+  return 0.0015*Math.cbrt(D) + 0.0015*Math.sqrt(LE) + 0.015*Math.cbrt(p*p);
+}
+const UN_PD_F={'1A':1.500,'2A':1.000,'3A':0.750,'1B':1.950,'2B':1.300,'3B':0.975};
+const UN_ALLOW_F={'1A':0.300,'2A':0.300,'3A':0};
+function unTdMaj(p,cls){ return (cls==='1A'?0.090:0.060)*Math.cbrt(p*p); }
+function unTD1(p){ return 0.25*p - 0.4*p*p; }
+
+/* ─────────────── drill sets ─────────────── */
+const FRACTIONS=(()=>{const a=[];for(let i=1;i<=64;i++)a.push([i+'/64',i/64]);return a;})();
+const NUMBER_DRILLS=[[1,.2280],[2,.2210],[3,.2130],[4,.2090],[5,.2055],[6,.2040],[7,.2010],[8,.1990],
+ [9,.1960],[10,.1935],[11,.1910],[12,.1890],[13,.1850],[14,.1820],[15,.1800],[16,.1770],[17,.1730],
+ [18,.1695],[19,.1660],[20,.1610],[21,.1590],[22,.1570],[23,.1540],[24,.1520],[25,.1495],[26,.1470],
+ [27,.1440],[28,.1405],[29,.1360],[30,.1285],[31,.1200],[32,.1160],[33,.1130],[34,.1110],[35,.1100],
+ [36,.1065],[37,.1040],[38,.1015],[39,.0995],[40,.0980],[41,.0960],[42,.0935],[43,.0890],[44,.0860],
+ [45,.0820],[46,.0810],[47,.0785],[48,.0760],[49,.0730],[50,.0700],[51,.0670],[52,.0635],[53,.0595],
+ [54,.0550],[55,.0520],[56,.0465],[57,.0430],[58,.0420],[59,.0410],[60,.0400]];
+const LETTER_DRILLS=[['A',.234],['B',.238],['C',.242],['D',.246],['E',.250],['F',.257],['G',.261],
+ ['H',.266],['I',.272],['J',.277],['K',.281],['L',.290],['M',.295],['N',.302],['O',.316],['P',.323],
+ ['Q',.332],['R',.339],['S',.348],['T',.358],['U',.368],['V',.377],['W',.386],['X',.397],['Y',.404],['Z',.413]];
+
+function metricDrills(){
+  const a=[];
+  for(let v=0.5; v<=3.0001; v+=0.05) a.push([v.toFixed(2)+' mm', +v.toFixed(2)]);
+  for(let v=3.1; v<=14.0001; v+=0.1)  a.push([v.toFixed(1)+' mm', +v.toFixed(1)]);
+  for(let v=14.25; v<=32.0001; v+=0.25) a.push([v.toFixed(2)+' mm', +v.toFixed(2)]);
+  return a;
+}
+function inchDrills(){
+  const a=[];
+  NUMBER_DRILLS.forEach(d=>a.push(['#'+d[0], d[1]]));
+  LETTER_DRILLS.forEach(d=>a.push([d[0], d[1]]));
+  FRACTIONS.forEach(d=>a.push([d[0]+'"', d[1]]));
+  return a.sort((x,y)=>x[1]-y[1]);
+}
+/* nearest drill at or below target, plus nearest overall */
+function pickDrill(target,set){
+  const list=(set==='metric')?metricDrills():inchDrills();
+  let best=null,bd=1e9, under=null;
+  list.forEach(d=>{
+    const diff=Math.abs(d[1]-target);
+    if(diff<bd){bd=diff;best=d;}
+    if(d[1]<=target+1e-9 && (!under || d[1]>under[1])) under=d;
+  });
+  return {nearest:best, under:under};
+}
+
+/* ─────────────── helpers ─────────────── */
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value);
+let SYS='iso';
+function rangeIdx(d){
+  for(let i=0;i<DRANGES.length;i++) if(d>DRANGES[i][0]&&d<=DRANGES[i][1]) return i;
+  return -1;
+}
+function look(t,p,g,gs){const r=t[p];if(!r)return undefined;const i=gs.indexOf(g);return i<0?undefined:r[i];}
+function look2(t,ri,p,g,gs){if(ri<0||!t[ri])return undefined;const r=t[ri][p];if(!r)return undefined;
+  const i=gs.indexOf(g);return i<0?undefined:r[i];}
+function fmtP(v){ return (Math.round(v*100000)/100000).toString(); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CORE CALCULATION
+   ══════════════════════════════════════════════════════════════════════════════ */
+function compute(){
+  const ext=$('ttype').value==='ext';
+  const starts=Math.max(1,Math.round(num('starts')||1));
+  const flags=[];
+  const D=num('dnom'); let P;
+  if(SYS==='iso'){ P=num('pitch'); }
+  else { const tpi=num('pitch'); P = tpi>0 ? 1/tpi : NaN; }
+  if(!(D>0)||!(P>0)) return {err:'Enter a positive diameter and pitch.'};
+
+  /* basic profile (identical 60° geometry for M and UN) */
+  const H  = P*Math.sqrt(3)/2;
+  const d2b= D - 0.649519052838329*P;
+  const d1b= D - 1.082531754730548*P;
+  const d3b= D - 1.226869322418674*P;   /* H/6 truncation, ISO 965-3 basis */
+
+  let dev=null, devC=null, Tpd=null, Tcd=null, TpdSrc='', TcdSrc='', clsStr='', lim={};
+  let ri=-1, pdG=null,pdP=null,cdG=null,cdP=null, unCls=null;
+
+  if(SYS==='iso'){
+    ri=rangeIdx(D);
+    pdG=parseInt($('pdGrade').value); pdP=$('pdPos').value;
+    cdG=parseInt($('cdGrade').value); cdP=$('cdPos').value;
+    if(ri<0) flags.push({t:'warn',m:'Basic major ø '+D+' mm is outside the 0,99–355 mm range of ISO 965-1 Tables 2/5/6.'});
+    if(FD[P]===undefined) flags.push({t:'warn',m:'Pitch '+P+' mm is not a tabulated ISO pitch.'});
+    dev  = (pdP==='h'||pdP==='H') ? 0 : (FD[P]?FD[P][pdP]:undefined);
+    devC = (cdP==='h'||cdP==='H') ? 0 : (FD[P]?FD[P][cdP]:undefined);
+    if(dev==null)  flags.push({t:'err',m:'Position '+pdP+' is not defined for pitch '+P+' mm (ISO 965-1 Table 1).'});
+    if(devC==null) flags.push({t:'err',m:'Crest position '+cdP+' is not defined for pitch '+P+' mm.'});
+    if(ext){ Tpd=look2(TD2E,ri,P,pdG,TD2E_GRADES); TpdSrc='ISO 965-1 Table 6 (Td2)';
+             Tcd=look(TDMAJ,P,cdG,TDMAJ_GRADES);   TcdSrc='ISO 965-1 Table 4 (Td)'; }
+    else   { Tpd=look2(TD2,ri,P,pdG,TD2_GRADES);   TpdSrc='ISO 965-1 Table 5 (TD2)';
+             Tcd=look(TD1,P,cdG,TD1_GRADES);       TcdSrc='ISO 965-1 Table 3 (TD1)'; }
+    if(Tpd==null) flags.push({t:'err',m:'Pitch-ø grade '+pdG+' is not tabulated for D = '+D+' mm / P = '+P+
+      ' mm. ISO 965-1 omits grades whose calculated value would exceed the permitted crest tolerance.'});
+    if(Tcd==null) flags.push({t:'err',m:'Crest-ø grade '+cdG+' is not tabulated for P = '+P+' mm.'});
+    clsStr = (''+pdG+pdP)===(''+cdG+cdP) ? (''+pdG+pdP) : (''+pdG+pdP+cdG+cdP);
+    if(Tpd!=null&&Tcd!=null&&dev!=null&&devC!=null){
+      const e=dev/1000, eC=devC/1000, tp=Tpd/1000, tc=Tcd/1000;
+      if(ext){ lim.majMax=D+eC; lim.majMin=lim.majMax-tc;
+               lim.pdMax=d2b+e; lim.pdMin=lim.pdMax-tp;
+               lim.minVal=d3b+e; }                       /* ISO 965-3 single value */
+      else   { lim.minMin=d1b+eC; lim.minMax=lim.minMin+tc;
+               lim.pdMin=d2b+e;  lim.pdMax=lim.pdMin+tp;
+               lim.majMin=D+e; lim.majMax=null; }
+    }
+  } else {
+    unCls=$('unClass').value;
+    const isExtCls = /A$/.test(unCls);
+    if(isExtCls!==ext){ flags.push({t:'err',m:'Class '+unCls+' is an '+(isExtCls?'external':'internal')+
+      ' class but the thread type is set to '+(ext?'external':'internal')+'.'}); }
+    const LE = ($('engMode').value==='man') ? num('engMan') : D;   /* B1.1 tables use LE = D */
+    const T2A = unTd2_2A(D,P,LE);
+    Tpd = UN_PD_F[unCls]*T2A;
+    TpdSrc='ASME B1.1 §5 formula, class factor '+UN_PD_F[unCls];
+    const allow = ext ? (UN_ALLOW_F[unCls]||0)*T2A : 0;
+    dev = ext ? -allow*1000 : 0;   /* µ-units for display consistency (inch → µin later) */
+    if(ext){
+      Tcd = unTdMaj(P,unCls); TcdSrc='ASME B1.1 §5: '+(unCls==='1A'?'0,090':'0,060')+'·∛(p²)';
+      lim.majMax = D - allow;  lim.majMin = lim.majMax - Tcd;
+      lim.pdMax  = d2b - allow; lim.pdMin = lim.pdMax - Tpd;
+      lim.minVal = d3b - allow;
+    } else {
+      Tcd = unTD1(P); TcdSrc='ASME B1.1 §5: 0,25p − 0,4p²';
+      lim.minMin = d1b; lim.minMax = d1b + Tcd;
+      lim.pdMin  = d2b; lim.pdMax  = d2b + Tpd;
+      lim.majMin = D;   lim.majMax = null;
+    }
+    clsStr = unCls;
+    devC = dev;
+  }
+
+  const ok = (lim.pdMax!=null && lim.pdMin!=null);
+
+  /* engagement group (ISO only) */
+  let eng={group:'—',lo:null,hi:null,len:null};
+  if(SYS==='iso'){
+    const er=(ri>=0&&ENG[ri])?ENG[ri][P]:undefined;
+    if(er){ eng.lo=er[0]; eng.hi=er[1];
+      if($('engMode').value==='man'){ const L=num('engMan'); eng.len=L;
+        eng.group = L<=er[0]?'S':(L<=er[1]?'N':'L'); }
+      else eng.group='N';
+    } else if($('engMode').value==='man'){ eng.len=num('engMan'); }
+  } else {
+    eng.len = ($('engMode').value==='man')?num('engMan'):D;
+  }
+
+  /* inspection geometry */
+  const lead=starts*P;
+  const d2use= ok ? (lim.pdMax+lim.pdMin)/2 : d2b;
+  const leadAngle=Math.atan2(lead, Math.PI*d2use)*180/Math.PI;
+  const wBest=P/(2*Math.cos(Math.PI/6));
+  const wire = ($('wireMode').value==='man') ? num('wireMan')/uf() : wBest;
+  const useCorr = $('leadCorr').value==='on';
+  /* M = d2 + W(1 + cosec α) − (p/2)cot α  [+ W·0.5·tan²λ·cos α·cot α]
+     α = 30° half-angle → 1+cosec = 3, (p/2)cot = 0,866025·p, corr coeff = 0,75 */
+  function overWire(d2v){
+    const lam=Math.atan2(lead, Math.PI*d2v);
+    const base = d2v + 3*wire - H;
+    return base + (useCorr ? 0.75*wire*Math.tan(lam)*Math.tan(lam) : 0);
+  }
+  function betwWire(d2v){
+    const lam=Math.atan2(lead, Math.PI*d2v);
+    const base = d2v - 3*wire + H;
+    return base - (useCorr ? 0.75*wire*Math.tan(lam)*Math.tan(lam) : 0);
+  }
+  const Rmin=0.125*P, Rpref=P*Math.sqrt(3)/12;
+
+  /* root truncation, ISO 965-1 clause 11 (external threads) */
+  let Cmax=null,Cmin=null;
+  if(ext && Tpd!=null){
+    const Td2mm = (SYS==='iso') ? Tpd/1000 : Tpd;
+    const inner = 1 - Td2mm/(4*Rmin);
+    if(inner>=-1 && inner<=1){
+      Cmax = H/4 - Rmin*(1-Math.cos(Math.PI/3 - Math.acos(inner))) + Td2mm/2;
+    }
+    Cmin = 0.125*P;
+  }
+
+  /* ── tapping drill (internal threads) ── */
+  let tap=null;
+  if(!ext && ok){
+    const pct=num('pctThread');
+    const K=1.299038105676658;              /* 2 × 0,75H / P  → 0,75H = 0,649519P radial */
+    const hole = D - (pct/100)*K*P;
+    const pctOf = h => 100*(D-h)/(K*P);
+    const set=$('drillSet').value;
+    const pick=pickDrill(hole*uf(), set);           /* drill lists are in display units */
+    tap={pct:pct, hole:hole, K:K,
+         pctAtD1min:pctOf(lim.minMin), pctAtD1max:pctOf(lim.minMax),
+         holeForD1min:lim.minMin, holeForD1max:lim.minMax,
+         nearest:pick.nearest, under:pick.under,
+         nearestPct: pick.nearest?pctOf(pick.nearest[1]/uf()):null,
+         underPct:   pick.under  ?pctOf(pick.under[1]/uf()):null};
+    if(pct>100) flags.push({t:'warn',m:'A target above 100 % of thread means a hole smaller than the '+
+      'theoretical sharp-V minor ø — the tap will not clear.'});
+  }
+
+  /* ── gauges (Taylor principle) ── */
+  let gauge=null;
+  if(ok){
+    const gt=parseFloat($('gTol').value), gw=parseFloat($('gWear').value);
+    const gtOK=isFinite(gt), gwOK=isFinite(gw);
+    const u = (SYS==='iso')?1000:1e6;              /* µm or µin per working unit */
+    if(ext){
+      gauge={kind:'ring',
+        goPd:lim.pdMax, ngPd:lim.pdMin,
+        goPlain:lim.majMax, ngPlain:lim.majMin,
+        goWear: gwOK? lim.pdMax+gw/u : null,
+        tol: gtOK? gt/u : null};
+    } else {
+      gauge={kind:'plug',
+        goPd:lim.pdMin, ngPd:lim.pdMax,
+        goPlain:lim.minMin, ngPlain:lim.minMax,
+        goWear: gwOK? lim.pdMin-gw/u : null,
+        tol: gtOK? gt/u : null};
+    }
+  }
+
+  /* ── pre-plating ── */
+  let plat=null;
+  const pm=$('platMode').value;
+  if(pm!=='off' && ok){
+    const u=(SYS==='iso')?1000:1e6;
+    const tmin=num('tmin')/u, tmax=num('tmax')/u;
+    if(!(tmax>=tmin)||!(tmin>=0)) flags.push({t:'err',m:'Coating range invalid — max must be ≥ min ≥ 0.'});
+    else{
+      const s4=4*(tmax-tmin), s2=2*(tmax-tmin);
+      const Tpdw=(SYS==='iso')?Tpd/1000:Tpd, Tcdw=(SYS==='iso')?Tcd/1000:Tcd;
+      plat={tmin,tmax,mode:pm,shrink4:s4,shrink2:s2,u};
+      const cMax = ext?lim.majMax:lim.minMax, cMin = ext?lim.majMin:lim.minMin;
+      if(pm==='after'){
+        if(ext){ plat.pdMax=lim.pdMax-4*tmax; plat.pdMin=lim.pdMin-4*tmin;
+                 plat.cdMax=cMax-2*tmax;      plat.cdMin=cMin-2*tmin; }
+        else   { plat.pdMin=lim.pdMin+4*tmax; plat.pdMax=lim.pdMax+4*tmin;
+                 plat.cdMin=cMin+2*tmax;      plat.cdMax=cMax+2*tmin; }
+        if(s4>Tpdw) flags.push({t:'err',m:'Coating spread consumes 4×spread = '+((s4)*u).toFixed(0)+
+          ' which exceeds the whole pitch-ø tolerance of '+(Tpdw*u).toFixed(0)+'. No pre-plate band exists.'});
+        else if(s4>0.6*Tpdw) flags.push({t:'warn',m:'Coating spread consumes '+(100*s4/Tpdw).toFixed(0)+
+          '% of the pitch-ø tolerance, leaving '+((Tpdw-s4)*u).toFixed(0)+' for manufacture.'});
+        if(Tcdw!=null && s2>Tcdw) flags.push({t:'err',m:'2×coating spread exceeds the crest-ø tolerance.'});
+      } else {
+        if(ext){ plat.pdMax=lim.pdMax+4*tmax; plat.pdMin=lim.pdMin+4*tmin;
+                 plat.cdMax=cMax+2*tmax;      plat.cdMin=cMin+2*tmin;
+                 plat.transgress=plat.pdMax>d2b+1e-9; plat.tAllow=(dev==null?0:-dev/4); }
+        else   { plat.pdMin=lim.pdMin-4*tmax; plat.pdMax=lim.pdMax-4*tmin;
+                 plat.cdMin=cMin-2*tmax;      plat.cdMax=cMax-2*tmin;
+                 plat.transgress=plat.pdMin<d2b-1e-9; plat.tAllow=(dev==null?0:dev/4); }
+        const unit=(SYS==='iso')?'µm':'µin';
+        if(plat.transgress) flags.push({t:'err',m:'After coating the pitch ø transgresses the maximum-material '+
+          'limit of position '+(ext?'h':'H')+', which ISO 965-1 clause 12 forbids. Max permissible coating for this '+
+          'position is '+Math.abs(plat.tAllow).toFixed(1)+' '+unit+' (= |fundamental deviation| ÷ 4).'});
+        else flags.push({t:'ok',m:'After coating the thread stays inside the position '+(ext?'h':'H')+
+          ' maximum-material limit. Headroom '+Math.abs(plat.tAllow).toFixed(1)+' '+unit+'.'});
+      }
+    }
+  }
+
+  /* designation */
+  let desig;
+  if(SYS==='iso'){
+    desig='M'+fmtP(D)+'×'+fmtP(P);
+    if(COARSE[D]===P && starts===1) desig='M'+fmtP(D);
+    if(starts>1) desig='M'+fmtP(D)+'×Ph'+fmtP(lead)+'P'+fmtP(P);
+    desig+=' - '+clsStr;
+    if($('hand').value==='LH') desig+=' - LH';
+  } else {
+    const tpi=1/P;
+    desig=fmtP(D)+'-'+fmtP(Math.round(tpi*1000)/1000)+' '+$('unForm').value+'-'+clsStr;
+    if($('hand').value==='LH') desig+=' LH';
+  }
+
+  return {D,P,ext,starts,H,d2b,d1b,d3b,dev,devC,Tpd,Tcd,TpdSrc,TcdSrc,lim,eng,ok,lead,leadAngle,
+          wBest,wire,useCorr,overWire,betwWire,Rmin,Rpref,Cmax,Cmin,plat,tap,gauge,flags,desig,
+          clsStr,ri,pdG,pdP,cdG,cdP,unCls,SYS};
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════════════════════════════════ */
+let LAST=null;
+function uf(){ /* working-unit → display-unit factor */
+  const du=$('dunit').value;
+  if(SYS==='iso') return du==='in' ? 1/25.4 : 1;
+  return du==='mm' ? 25.4 : 1;
+}
+function f(v){ const n=parseInt($('dp').value); return v==null?'—':(v*uf()).toFixed(n); }
+function fr(v){ const n=parseInt($('dp').value); return v==null?'—':v.toFixed(n); } /* already display units */
+function uName(){ return $('dunit').value==='mm'?'mm':'in'; }
+function microName(){ return SYS==='iso' ? 'µm' : 'µin'; }
+function toMicro(v){ return v==null?null:(SYS==='iso'? v : v); }
+
+function render(){
+  const r=compute(); LAST=r;
+  if(r.err){ $('head').innerHTML='<div class="flag err">'+r.err+'</div>'; return; }
+  const ext=r.ext, L=r.lim, mid=(a,b)=>(a==null||b==null)?null:(a+b)/2;
+
+  $('head').innerHTML =
+    '<div class="desig">'+r.desig+'</div>'+
+    '<div class="sub" style="margin-top:6px">'+
+      (ext?'External thread':'Internal thread')+
+      ' &middot; '+(SYS==='iso'?('P = '+fmtP(r.P)+' mm'):(fmtP(Math.round(1/r.P*1000)/1000)+' tpi'))+
+      (r.starts>1?' &middot; '+r.starts+' starts, lead '+f(r.lead)+' '+uName():'')+
+      (SYS==='iso'?'<span class="pill">engagement '+r.eng.group+'</span>':'')+
+      (SYS==='iso'&&r.ri>=0?'<span class="pill">ø range '+DRANGES[r.ri][0]+'–'+DRANGES[r.ri][1]+'</span>':'')+
+      '<span class="pill src">'+(SYS==='iso'?'ISO 965-1':'ASME B1.1')+'</span>'+
+    '</div>';
+  $('flags').innerHTML=r.flags.map(x=>'<div class="flag '+x.t+'">'+x.m+'</div>').join('');
+
+  /* ---- diameters ---- */
+  let h='<tr><th>Diameter</th><th>Max</th><th>Mid</th><th>Min</th></tr>';
+  if(r.ok){
+    h+='<tr><td class="lab">Major ø '+(ext?'d':'D')+'</td><td class="max">'+f(L.majMax)+
+       '</td><td class="mid">'+f(mid(L.majMax,L.majMin))+'</td><td class="min">'+f(L.majMin)+'</td></tr>'+
+       '<tr><td class="lab">Pitch ø '+(ext?'d2':'D2')+'</td><td class="max">'+f(L.pdMax)+
+       '</td><td class="mid">'+f(mid(L.pdMax,L.pdMin))+'</td><td class="min">'+f(L.pdMin)+'</td></tr>';
+    if(ext){
+      h+='<tr><td class="lab">Minor ø d3 <span class="pill src">1 value</span></td>'+
+         '<td colspan="3" style="text-align:right">'+f(L.minVal)+'</td></tr>';
+    } else {
+      h+='<tr><td class="lab">Minor ø D1</td><td class="max">'+f(L.minMax)+
+         '</td><td class="mid">'+f(mid(L.minMax,L.minMin))+'</td><td class="min">'+f(L.minMin)+'</td></tr>';
+    }
+  }
+  h+='<tr class="grp"><td colspan="4">Basic sizes</td></tr>'+
+     '<tr><td class="lab">Basic major ø</td><td colspan="3">'+f(r.D)+'</td></tr>'+
+     '<tr><td class="lab">Basic pitch ø  (D − 0,649519 P)</td><td colspan="3">'+f(r.d2b)+'</td></tr>'+
+     '<tr><td class="lab">Basic minor ø D1 (D − 1,082532 P)</td><td colspan="3">'+f(r.d1b)+'</td></tr>'+
+     '<tr><td class="lab">Basic minor ø d3 (D − 1,226869 P)</td><td colspan="3">'+f(r.d3b)+'</td></tr>';
+  if(ext && r.Cmax!=null){
+    h+='<tr class="grp"><td colspan="4">Root truncation — ISO 965-1 clause 11</td></tr>'+
+       '<tr><td class="lab">C max</td><td colspan="3">'+f(r.Cmax)+'</td></tr>'+
+       '<tr><td class="lab">C min = 0,125 P</td><td colspan="3">'+f(r.Cmin)+'</td></tr>';
+  }
+  $('tDia').innerHTML=h;
+  $('diaNote').innerHTML = ext
+    ? '<b>d3 is a single value, not a max/min pair.</b> ISO 965-3:1998 Table 1 tabulates the external minor '+
+      'diameter as one deviation, <code>−(|es| + H/6)</code>, on an H/6-truncation basis, "for stress '+
+      'calculation". The actual root is controlled by form (clause 11), not by a diameter tolerance — hence '+
+      'C max / C min above rather than d3 max / d3 min.'
+    : '<b>No maximum major ø exists for internal threads.</b> Verified against two standards: ISO 965-1 '+
+      'tabulates none, and ISO 965-3 Table 1 lists only pitch and minor diameter columns for internal threads. '+
+      'The root is limited by form (clause 11): it must not transgress the basic profile.';
+
+  /* ---- tolerances ---- */
+  const MU=microName();
+  let t='<tr><th>Item</th><th>'+MU+'</th><th>'+uName()+'</th></tr>';
+  if(SYS==='iso'){
+    t+='<tr><td class="lab">Fundamental deviation ('+(ext?'es':'EI')+', pos '+r.pdP+')</td><td>'+
+       (r.dev==null?'—':(r.dev>0?'+':'')+r.dev)+'</td><td>'+(r.dev==null?'—':f(r.dev/1000))+'</td></tr>';
+    if(r.pdP!==r.cdP) t+='<tr><td class="lab">Fund. deviation (crest, pos '+r.cdP+')</td><td>'+
+       (r.devC==null?'—':(r.devC>0?'+':'')+r.devC)+'</td><td>'+(r.devC==null?'—':f(r.devC/1000))+'</td></tr>';
+    t+='<tr><td class="lab">Pitch ø tolerance, grade '+r.pdG+'</td><td>'+(r.Tpd==null?'—':r.Tpd)+
+       '</td><td>'+(r.Tpd==null?'—':f(r.Tpd/1000))+'</td></tr>'+
+       '<tr><td class="lab">Crest ø tolerance, grade '+r.cdG+'</td><td>'+(r.Tcd==null?'—':r.Tcd)+
+       '</td><td>'+(r.Tcd==null?'—':f(r.Tcd/1000))+'</td></tr>';
+  } else {
+    const mi=v=>v==null?'—':Math.round(v*1e6);
+    t+='<tr><td class="lab">Allowance (external)</td><td>'+(r.dev==null?'—':Math.round(r.dev))+
+       '</td><td>'+(r.dev==null?'—':f(r.dev/1e6))+'</td></tr>'+
+       '<tr><td class="lab">Pitch ø tolerance, class '+r.unCls+'</td><td>'+mi(r.Tpd)+
+       '</td><td>'+f(r.Tpd)+'</td></tr>'+
+       '<tr><td class="lab">'+(ext?'Major':'Minor')+' ø tolerance</td><td>'+mi(r.Tcd)+
+       '</td><td>'+f(r.Tcd)+'</td></tr>';
+  }
+  t+='<tr><td class="lab" colspan="3" style="color:#6c7d92;font-size:11px">'+r.TpdSrc+' · '+r.TcdSrc+'</td></tr>';
+  if(SYS==='iso'){
+    t+='<tr class="grp"><td colspan="3">Length of engagement (Table 2)</td></tr>'+
+       '<tr><td class="lab">Group</td><td colspan="2">'+r.eng.group+'</td></tr>'+
+       '<tr><td class="lab">S — up to &amp; incl.</td><td colspan="2">'+(r.eng.lo==null?'—':f(r.eng.lo)+' '+uName())+'</td></tr>'+
+       '<tr><td class="lab">N — over … up to</td><td colspan="2">'+(r.eng.lo==null?'—':f(r.eng.lo)+' … '+f(r.eng.hi))+'</td></tr>'+
+       '<tr><td class="lab">L — over</td><td colspan="2">'+(r.eng.hi==null?'—':f(r.eng.hi)+' '+uName())+'</td></tr>';
+    const rec=(ext?REC_EXT:REC_INT), g=r.eng.group;
+    if(g!=='—'){
+      t+='<tr class="grp"><td colspan="3">Recommended classes, group '+g+'</td></tr>';
+      ['fine','medium','coarse'].forEach(q=>{
+        const l=rec[q][g]||[];
+        t+='<tr><td class="lab">'+q+'</td><td colspan="2">'+(l.length?l.join('  '):'—')+'</td></tr>';
+      });
+    }
+  } else {
+    t+='<tr class="grp"><td colspan="3">Length of engagement</td></tr>'+
+       '<tr><td class="lab">LE used in the tolerance formula</td><td colspan="2">'+f(r.eng.len)+' '+uName()+'</td></tr>'+
+       '<tr><td class="lab" colspan="2" style="color:#6c7d92;font-size:11px">'+
+       'ASME B1.1 table values use LE = basic major ø.</td><td></td></tr>';
+  }
+  $('tTol').innerHTML=t;
+
+  /* ---- tapping drill ---- */
+  if(r.tap){
+    const T=r.tap;
+    let tp='<tr><th>Item</th><th>Hole ø</th><th>% thread</th></tr>';
+    tp+='<tr><td class="lab">Target '+T.pct+' % of thread</td><td class="mid">'+f(T.hole)+
+        '</td><td>'+T.pct.toFixed(1)+'</td></tr>';
+    if(T.nearest) tp+='<tr><td class="lab">Nearest drill — <b>'+T.nearest[0]+'</b></td><td class="mid">'+
+        fr(T.nearest[1])+'</td><td>'+(T.nearestPct==null?'—':T.nearestPct.toFixed(1))+'</td></tr>';
+    if(T.under && (!T.nearest || T.under[0]!==T.nearest[0]))
+      tp+='<tr><td class="lab">Largest drill ≤ target — '+T.under[0]+'</td><td class="mid">'+
+        fr(T.under[1])+'</td><td>'+(T.underPct==null?'—':T.underPct.toFixed(1))+'</td></tr>';
+    tp+='<tr class="grp"><td colspan="3">Hole must finish inside the D1 limits</td></tr>'+
+        '<tr><td class="lab">D1 min (max material)</td><td class="min">'+f(T.holeForD1min)+
+        '</td><td>'+T.pctAtD1min.toFixed(1)+'</td></tr>'+
+        '<tr><td class="lab">D1 max (least material)</td><td class="max">'+f(T.holeForD1max)+
+        '</td><td>'+T.pctAtD1max.toFixed(1)+'</td></tr>';
+    const okDrill = T.nearest && T.nearest[1]/uf()>=T.holeForD1min-1e-9 && T.nearest[1]/uf()<=T.holeForD1max+1e-9;
+    tp+='<tr><td class="lab">Nearest drill inside D1 limits?</td><td colspan="2" style="text-align:right;color:'+
+        (okDrill?'#7ee081':'#ffb454')+'">'+(okDrill?'yes':'NO — outside the class limits')+'</td></tr>';
+    $('tTap').innerHTML=tp;
+    $('tapNote').innerHTML='<b>Convention:</b> 100 % of thread = 0,75 H, i.e. hole = D − (%/100) × 1,299038 × P. '+
+      'Taken from <b>FED-STD-H28/2B</b> Table II.A.1 note 1; reproduces that standard\'s own percent columns '+
+      '(1.750-8 UN, minor 1.615 → 83,1 %). The drill list is nominal size only — real drills cut oversize '+
+      '(H28 tabulates a "probable oversize" of roughly 0,0015–0,0026 in on small sizes), so check the finished '+
+      'hole against the D1 limits above.';
+  } else {
+    $('tTap').innerHTML='<tr><td class="lab" style="padding:12px">Tapping drill applies to internal threads.</td></tr>';
+    $('tapNote').innerHTML='Switch <b>Thread type</b> to Internal to size a tapping drill.';
+  }
+
+  /* ---- gauges & inspection ---- */
+  let gt='<tr><th>Property</th><th>Value</th></tr>';
+  if(r.gauge){
+    const G=r.gauge, isRing=G.kind==='ring';
+    gt+='<tr class="grp"><td colspan="2">'+(isRing?'Screw RING gauges (external thread)':'Screw PLUG gauges (internal thread)')+'</td></tr>'+
+        '<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td><td>'+f(G.goPd)+'</td></tr>'+
+        '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td><td>'+f(G.ngPd)+'</td></tr>'+
+        '<tr><td class="lab">Plain GO '+(isRing?'(major ø)':'(minor ø)')+'</td><td>'+f(G.goPlain)+'</td></tr>'+
+        '<tr><td class="lab">Plain NOT GO</td><td>'+f(G.ngPlain)+'</td></tr>';
+    if(G.tol!=null) gt+='<tr><td class="lab">Gauge PD tolerance (entered)</td><td>±'+f(G.tol/2)+'</td></tr>';
+    if(G.goWear!=null) gt+='<tr><td class="lab">GO wear limit (entered)</td><td>'+f(G.goWear)+'</td></tr>';
+  }
+  gt+='<tr class="grp"><td colspan="2">Profile</td></tr>'+
+      '<tr><td class="lab">H (fundamental triangle)</td><td>'+f(r.H)+'</td></tr>'+
+      '<tr><td class="lab">Thread height 5H/8</td><td>'+f(r.H*5/8)+'</td></tr>'+
+      '<tr><td class="lab">Lead</td><td>'+f(r.lead)+'</td></tr>'+
+      '<tr><td class="lab">Lead angle at pitch ø</td><td>'+r.leadAngle.toFixed(3)+'°</td></tr>'+
+      '<tr><td class="lab">Root radius min = 0,125 P</td><td>'+f(r.Rmin)+'</td></tr>'+
+      '<tr><td class="lab">Root radius preferred = H/6</td><td>'+f(r.Rpref)+'</td></tr>'+
+      '<tr class="grp"><td colspan="2">Wire / ball measurement'+(r.useCorr?' — lead-angle corrected':'')+'</td></tr>'+
+      '<tr><td class="lab">Wire ø used</td><td>'+f(r.wire)+'</td></tr>';
+  if(r.ok){
+    const fn=r.ext?r.overWire:r.betwWire;
+    gt+='<tr><td class="lab">'+(r.ext?'Over wires @ d2 max':'Between balls @ D2 max')+'</td><td>'+f(fn(r.lim.pdMax))+'</td></tr>'+
+        '<tr><td class="lab">'+(r.ext?'Over wires @ d2 min':'Between balls @ D2 min')+'</td><td>'+f(fn(r.lim.pdMin))+'</td></tr>';
+    if(r.useCorr){
+      const lam=Math.atan2(r.lead,Math.PI*r.lim.pdMax);
+      gt+='<tr><td class="lab">Correction applied</td><td>'+f(0.75*r.wire*Math.tan(lam)*Math.tan(lam))+'</td></tr>';
+    }
+  }
+  $('tGeo').innerHTML=gt;
+  $('geoNote').innerHTML=
+    '<b>Gauge sizes</b> follow the Taylor principle as set out in ISO 1502 clauses 4–5: the GO gauge is made to '+
+    'the workpiece maximum-material limit with a full profile, the NOT GO gauge to the least-material limit '+
+    'with a truncated profile. Those target sizes are exact. <b>Gauge-making tolerance and wear allowance are '+
+    'left blank on purpose</b> — they come from ISO 1502 Tables 4–9 and clause 13, which are not in the '+
+    'publicly available preview of that standard, so nothing has been invented here. Enter them in section 05 '+
+    'if you have the standard.<br><br>'+
+    '<b>Wire measurement:</b> M = d2 + W(1 + cosec α) − (P/2)·cot α, which for α = 30° is '+
+    'M = d2 + 3W − H. The optional lead-angle term is '+
+    '<code>+ W · 0,5 · tan²λ · cos α · cot α</code> = <code>+ 0,75 · W · tan²λ</code>, attributed to '+
+    'Machinery\'s Handbook. <b>It is off by default and is the one figure here not traceable to a primary '+
+    'standard I could obtain</b> — the sign is confirmed by geometry (the normal-plane groove is narrower than '+
+    'the axial one, so the wire rides higher and M increases), but treat the coefficient as the handbook value, '+
+    'not a standard. Van Keuren/H28 note the uncorrected form is "usually sufficiently accurate for lead angles '+
+    'up to 5 degrees" — this thread is at '+r.leadAngle.toFixed(2)+'°.';
+
+  /* ---- pre-plating ---- */
+  if(r.plat && r.ok){
+    const p=r.plat, after=p.mode==='after', MUn=microName();
+    let pt='<tr><th>Diameter</th><th>'+(after?'Pre-plate max':'As-plated max')+'</th><th>'+
+           (after?'Pre-plate min':'As-plated min')+'</th><th>Band</th></tr>';
+    pt+='<tr><td class="lab">Pitch ø (4t)</td><td class="max">'+f(p.pdMax)+'</td><td class="min">'+f(p.pdMin)+
+        '</td><td>'+f(p.pdMax-p.pdMin)+'</td></tr>'+
+        '<tr><td class="lab">Crest ø (2t)</td><td class="max">'+f(p.cdMax)+'</td><td class="min">'+f(p.cdMin)+
+        '</td><td>'+f(p.cdMax-p.cdMin)+'</td></tr>'+
+        '<tr class="grp"><td colspan="4">Coating</td></tr>'+
+        '<tr><td class="lab">Thickness range</td><td colspan="3">'+(p.tmin*p.u).toFixed(1)+' – '+
+        (p.tmax*p.u).toFixed(1)+' '+MUn+'</td></tr>'+
+        '<tr><td class="lab">Pitch ø growth 4t</td><td colspan="3">'+(4*p.tmin*p.u).toFixed(0)+' – '+
+        (4*p.tmax*p.u).toFixed(0)+' '+MUn+'</td></tr>'+
+        '<tr><td class="lab">Crest ø growth 2t</td><td colspan="3">'+(2*p.tmin*p.u).toFixed(0)+' – '+
+        (2*p.tmax*p.u).toFixed(0)+' '+MUn+'</td></tr>';
+    if(after) pt+='<tr><td class="lab">Band lost to plating spread</td><td colspan="3">'+
+        (p.shrink4*p.u).toFixed(0)+' '+MUn+'</td></tr>';
+    $('tPlat').innerHTML=pt;
+    $('platNote').innerHTML = after
+      ? 'Class treated as the <b>finished, plated</b> requirement: max limit backed off by 4·t<sub>max</sub>, '+
+        'min limit by 4·t<sub>min</sub>, so the usable band narrows by 4·(t<sub>max</sub>−t<sub>min</sub>).'
+      : 'ISO 965-1 clause 12: <i>"the tolerances apply to the parts before coating… After coating, the actual '+
+        'thread profile shall not at any point transgress the maximum material limits for positions H or h."</i>';
+    $('platSec').style.display='';
+  } else $('platSec').style.display='none';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   XLSX WRITER (store-only ZIP + CRC32, no libraries)
+   ══════════════════════════════════════════════════════════════════════════════ */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_TABLE[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+  const now=new Date();
+  const dt=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF;
+  const dd=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  files.forEach(f=>{
+    const name=enc.encode(f.name),data=enc.encode(f.data),crc=crc32(data);
+    const lh=new Uint8Array(30+name.length),dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0,true);dv.setUint16(8,0,true);
+    dv.setUint16(10,dt,true);dv.setUint16(12,dd,true);dv.setUint32(14,crc,true);
+    dv.setUint32(18,data.length,true);dv.setUint32(22,data.length,true);
+    dv.setUint16(26,name.length,true);dv.setUint16(28,0,true);lh.set(name,30);
+    parts.push(lh,data);
+    const ch=new Uint8Array(46+name.length),cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0,true);
+    cv.setUint16(10,0,true);cv.setUint16(12,dt,true);cv.setUint16(14,dd,true);cv.setUint32(16,crc,true);
+    cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);
+    cv.setUint16(30,0,true);cv.setUint16(32,0,true);cv.setUint16(34,0,true);cv.setUint16(36,0,true);
+    cv.setUint32(38,0,true);cv.setUint32(42,offset,true);ch.set(name,46);
+    central.push(ch); offset+=lh.length+data.length;
+  });
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array(22),ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(4,0,true);ev.setUint16(6,0,true);
+  ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true);ev.setUint32(16,offset,true);ev.setUint16(20,0,true);
+  const all=[...parts,...central,end],total=all.reduce((a,b)=>a+b.length,0);
+  const out=new Uint8Array(total);let p=0;all.forEach(b=>{out.set(b,p);p+=b.length;});
+  return new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xesc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+function colName(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26;}return s;}
+function sheetXml(rows,widths){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  if(widths&&widths.length){x+='<cols>';widths.forEach((w,i)=>{x+='<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>';});x+='</cols>';}
+  x+='<sheetData>';
+  rows.forEach((row,ri)=>{
+    x+='<row r="'+(ri+1)+'">';
+    row.forEach((cell,ci)=>{
+      if(cell===null||cell===undefined||cell==='')return;
+      let v=cell,s=0,fs=false;
+      if(typeof cell==='object'){v=cell.v;s=cell.s||0;fs=cell.t==='s';}
+      if(v===null||v===undefined||v==='')return;
+      const ref=colName(ci)+(ri+1), isNum=!fs&&typeof v==='number'&&isFinite(v);
+      x+= isNum ? '<c r="'+ref+'" s="'+s+'"><v>'+v+'</v></c>'
+                : '<c r="'+ref+'" s="'+s+'" t="inlineStr"><is><t xml:space="preserve">'+xesc(v)+'</t></is></c>';
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+const STYLES=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="4"><numFmt numFmtId="164" formatCode="0.000"/><numFmt numFmtId="165" formatCode="0.00000"/>
+<numFmt numFmtId="166" formatCode="0.0"/><numFmt numFmtId="167" formatCode="0"/></numFmts>
+<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="14"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF666666"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left/><right/><top/><bottom style="thin"><color rgb="FF9E9E9E"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="9">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+const S={txt:0,b:1,title:2,n3:3,n5:4,hdr:5,note:6,n0:7,n1:8};
+function buildXlsx(sheets){
+  const n=sheets.length;
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+   '<Default Extension="xml" ContentType="application/xml"/>'+
+   '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+   sheets.map((s,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+
+   '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+
+   sheets.map((s,i)=>'<sheet name="'+xesc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>';
+  const wbRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+
+   '<Relationship Id="rId'+(n+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const files=[{name:'[Content_Types].xml',data:ct},{name:'_rels/.rels',data:rels},
+    {name:'xl/workbook.xml',data:wb},{name:'xl/_rels/workbook.xml.rels',data:wbRels},
+    {name:'xl/styles.xml',data:STYLES}];
+  sheets.forEach((s,i)=>files.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:sheetXml(s.rows,s.widths)}));
+  return zipStore(files);
+}
+function saveBlob(blob,filename){
+  const msg=$('saveMsg');
+  try{
+    if(window.navigator&&window.navigator.msSaveOrOpenBlob){
+      window.navigator.msSaveOrOpenBlob(blob,filename);
+      msg.innerHTML='<span class="flag ok" style="display:block">Saved '+xesc(filename)+'</span>';return;
+    }
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{document.body.removeChild(a);}catch(e){}},1000);
+    setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){}},180000);
+    msg.innerHTML='<span class="flag ok" style="display:block">Saved <b>'+xesc(filename)+'</b> &nbsp;·&nbsp; '+
+      'if nothing downloaded, <a class="rescue" href="'+url+'" download="'+xesc(filename)+'">click here</a> (3 min).</span>';
+  }catch(e){ msg.innerHTML='<span class="flag err" style="display:block">Download failed: '+xesc(e.message)+'</span>'; }
+}
+
+function exportRows(r){
+  const dp=parseInt($('dp').value), NS=dp>=4?S.n5:S.n3, U=uName(), MU=microName();
+  const ext=r.ext,L=r.lim,mid=(a,b)=>(a==null||b==null)?null:(a+b)/2;
+  const H=v=>({v:v,s:S.hdr}), N=v=>(v==null?'—':{v:+(v*uf()).toFixed(7),s:NS}),
+        Nr=v=>(v==null?'—':{v:+v.toFixed(7),s:NS}), I=v=>(v==null?'—':{v:Math.round(v),s:S.n0});
+
+  const summary=[
+    [{v:'Thread — '+r.desig,s:S.title}],[],
+    [H('Input'),H('Value'),H('Unit')],
+    ['Designation',r.desig,''],
+    ['System',SYS==='iso'?'ISO metric M':'Unified inch UN',''],
+    ['Thread type',ext?'External':'Internal',''],
+    ['Basic major diameter',N(r.D),U],
+    [SYS==='iso'?'Pitch P':'Threads per inch', SYS==='iso'?N(r.P):{v:+(1/r.P).toFixed(4),s:S.n3},SYS==='iso'?U:'tpi'],
+    ['Number of starts',{v:r.starts,s:S.n0},''],
+    ['Lead',N(r.lead),U],
+    ['Direction',$('hand').value,''],
+    ['Tolerance class',r.clsStr,''],
+    SYS==='iso'?['Engagement group',r.eng.group,'']:['LE used',N(r.eng.len),U],
+    [],
+    [H('Result'),H('Max'),H('Mid'),H('Min'),H('Unit')],
+    ['Major diameter '+(ext?'d':'D'),N(L.majMax),N(mid(L.majMax,L.majMin)),N(L.majMin),U],
+    ['Pitch diameter '+(ext?'d2':'D2'),N(L.pdMax),N(mid(L.pdMax,L.pdMin)),N(L.pdMin),U],
+    ext?['Minor diameter d3 (single value, ISO 965-3)',N(L.minVal),'','',U]
+       :['Minor diameter D1',N(L.minMax),N(mid(L.minMax,L.minMin)),N(L.minMin),U],
+    [],
+    [{v:'Generated '+new Date().toLocaleString(),s:S.note}]
+  ];
+
+  const dia=[
+    [{v:'Diameter limits — '+r.desig,s:S.title}],[],
+    [H('Diameter'),H('Symbol'),H('Max'),H('Mid'),H('Min'),H('Tolerance ('+MU+')')],
+    ['Major diameter',ext?'d':'D',N(L.majMax),N(mid(L.majMax,L.majMin)),N(L.majMin),
+      ext?I(SYS==='iso'?r.Tcd:r.Tcd*1e6):'form limited'],
+    ['Pitch diameter',ext?'d2':'D2',N(L.pdMax),N(mid(L.pdMax,L.pdMin)),N(L.pdMin),
+      I(SYS==='iso'?r.Tpd:r.Tpd*1e6)],
+    ext?['Minor diameter','d3',N(L.minVal),'','','single value']
+       :['Minor diameter','D1',N(L.minMax),N(mid(L.minMax,L.minMin)),N(L.minMin),I(SYS==='iso'?r.Tcd:r.Tcd*1e6)],
+    [],
+    [H('Basic size'),H('Value ('+U+')')],
+    ['Basic major diameter',N(r.D)],
+    ['Basic pitch diameter = D − 0,649519·P',N(r.d2b)],
+    ['Basic minor diameter D1 = D − 1,082532·P',N(r.d1b)],
+    ['Basic minor diameter d3 = D − 1,226869·P',N(r.d3b)],
+    ['Fundamental triangle height H',N(r.H)],
+    []
+  ];
+  if(ext&&r.Cmax!=null){
+    dia.push([H('Root truncation — ISO 965-1 clause 11'),H('Value ('+U+')')]);
+    dia.push(['C max',N(r.Cmax)]);
+    dia.push(['C min = 0,125 P',N(r.Cmin)]);
+    dia.push([]);
+  }
+  dia.push([{v: ext
+    ? 'd3 is ONE value, not a max/min pair: ISO 965-3:1998 Table 1 gives the external minor diameter as deviation −(|es| + H/6) on an H/6 truncation basis, for stress calculation. The root is form-controlled (clause 11).'
+    : 'ISO 965-1 and ISO 965-3 both omit a maximum major diameter for internal threads — it is limited by root form (clause 11), not by a diameter tolerance.', s:S.note}]);
+
+  const insp=[
+    [{v:'Gauges & inspection — '+r.desig,s:S.title}],[],
+    [H('Property'),H('Value'),H('Unit')],
+    ['Fundamental triangle height H',N(r.H),U],
+    ['Thread height 5H/8',N(r.H*5/8),U],
+    ['Lead',N(r.lead),U],
+    ['Lead angle at pitch diameter',{v:+r.leadAngle.toFixed(4),s:S.n5},'deg'],
+    ['Root radius min = 0,125·P',N(r.Rmin),U],
+    ['Root radius preferred = H/6',N(r.Rpref),U],
+    ['Wire diameter used',N(r.wire),U],
+    ['Lead-angle correction',r.useCorr?'applied (Machinery\'s Handbook)':'not applied',''],
+    []
+  ];
+  if(r.ok){
+    const fn=ext?r.overWire:r.betwWire;
+    insp.push([H(ext?'Over 3 wires':'Between balls'),H('Value ('+U+')')]);
+    insp.push(['At pitch diameter max',N(fn(L.pdMax))]);
+    insp.push(['At pitch diameter min',N(fn(L.pdMin))]);
+    insp.push([]);
+  }
+  if(r.gauge){
+    const G=r.gauge,isRing=G.kind==='ring';
+    insp.push([H(isRing?'Screw RING gauges (external)':'Screw PLUG gauges (internal)'),H('Pitch ø ('+U+')')]);
+    insp.push(['GO gauge — full form, at maximum-material limit',N(G.goPd)]);
+    insp.push(['NOT GO gauge — truncated, at least-material limit',N(G.ngPd)]);
+    insp.push(['Plain GO '+(isRing?'(major ø)':'(minor ø)'),N(G.goPlain)]);
+    insp.push(['Plain NOT GO',N(G.ngPlain)]);
+    if(G.tol!=null) insp.push(['Gauge PD tolerance (user entered)',N(G.tol)]);
+    if(G.goWear!=null) insp.push(['GO wear limit (user entered)',N(G.goWear)]);
+    insp.push([]);
+  }
+  insp.push([{v:'Gauge target sizes follow the Taylor principle per ISO 1502 clauses 4-5 and are exact. Gauge-making tolerances and wear allowances come from ISO 1502 Tables 4-9 / clause 13, which were NOT available; they are user input and left blank rather than invented.',s:S.note}]);
+  insp.push([{v:'Wire measurement M = d2 + W(1+cosec a) - (P/2)cot a = d2 + 3W - H for a=30deg. Optional lead-angle term +0,75*W*tan^2(lambda) is the Machinery\'s Handbook form and is NOT traceable to a primary standard here.',s:S.note}]);
+
+  const sheets=[{name:'Summary',rows:summary,widths:[44,16,14,14,12]},
+                {name:'Diameters',rows:dia,widths:[46,12,14,14,14,18]},
+                {name:'Gauges & inspection',rows:insp,widths:[48,18,10]}];
+
+  if(r.tap){
+    const T=r.tap;
+    const tap=[
+      [{v:'Tapping drill — '+r.desig,s:S.title}],[],
+      [H('Item'),H('Hole ø ('+U+')'),H('% of thread')],
+      ['Target',N(T.hole),{v:+T.pct.toFixed(1),s:S.n1}],
+      T.nearest?['Nearest drill: '+T.nearest[0],Nr(T.nearest[1]),{v:+T.nearestPct.toFixed(1),s:S.n1}]:[],
+      T.under?['Largest drill <= target: '+T.under[0],Nr(T.under[1]),{v:+T.underPct.toFixed(1),s:S.n1}]:[],
+      [],
+      [H('Class limits the finished hole must respect'),H('Hole ø ('+U+')'),H('% of thread')],
+      ['D1 min (maximum material)',N(T.holeForD1min),{v:+T.pctAtD1min.toFixed(1),s:S.n1}],
+      ['D1 max (least material)',N(T.holeForD1max),{v:+T.pctAtD1max.toFixed(1),s:S.n1}],
+      [],
+      [{v:'Convention: 100% of thread = 0,75H, hole = D - (%/100) x 1,299038 x P. Source FED-STD-H28/2B Table II.A.1 note 1; reproduces that standard\'s own percent columns.',s:S.note}],
+      [{v:'Drill sizes listed are NOMINAL. Real drills cut oversize (H28 tabulates probable oversize ~0,0015-0,0026 in on small sizes), so verify the finished hole against the D1 limits.',s:S.note}]
+    ];
+    sheets.push({name:'Tapping drill',rows:tap,widths:[46,18,14]});
+  }
+
+  if(r.plat){
+    const p=r.plat,after=p.mode==='after';
+    const pl=[
+      [{v:(after?'Pre-plating limits — ':'As-plated sizes — ')+r.desig,s:S.title}],[],
+      [H('Setting'),H('Value'),H('Unit')],
+      ['Mode',after?'Class applies AFTER plating':'Class applies BEFORE plating (ISO 965-1 default)',''],
+      ['Coating thickness min',{v:+(p.tmin*p.u).toFixed(2),s:S.n3},MU],
+      ['Coating thickness max',{v:+(p.tmax*p.u).toFixed(2),s:S.n3},MU],
+      ['Pitch ø change (4t)',(4*p.tmin*p.u).toFixed(0)+' – '+(4*p.tmax*p.u).toFixed(0),MU],
+      ['Crest ø change (2t)',(2*p.tmin*p.u).toFixed(0)+' – '+(2*p.tmax*p.u).toFixed(0),MU],
+      [],
+      [H('Diameter'),H(after?'Pre-plate max':'As-plated max'),H(after?'Pre-plate min':'As-plated min'),H('Band')],
+      ['Pitch diameter',N(p.pdMax),N(p.pdMin),N(p.pdMax-p.pdMin)],
+      ['Crest diameter',N(p.cdMax),N(p.cdMin),N(p.cdMax-p.cdMin)],
+      [],
+      [H('Finished (specified) limits'),H('Max'),H('Min')],
+      ['Pitch diameter',N(L.pdMax),N(L.pdMin)],
+      ['Crest diameter',N(ext?L.majMax:L.minMax),N(ext?L.majMin:L.minMin)],
+      []
+    ];
+    if(after) pl.push(['Band lost to plating spread',{v:+(p.shrink4*p.u).toFixed(1),s:S.n3},MU]);
+    if(r.flags.length){ pl.push([]); pl.push([H('Checks')]);
+      r.flags.forEach(fl=>pl.push([{v:fl.t.toUpperCase()+': '+fl.m.replace(/<[^>]+>/g,''),s:S.note}])); }
+    sheets.push({name:'Pre-plating',rows:pl,widths:[46,18,18,14]});
+  }
+
+  const ref=[
+    [{v:'Data sources and verification status',s:S.title}],[],
+    [H('Item'),H('Value'),H('Source / status')],
+    ['System',SYS==='iso'?'ISO metric M':'Unified inch UN',''],
+    ['Pitch ø tolerance',(SYS==='iso'?(r.Tpd==null?'—':r.Tpd+' µm'):(r.Tpd*1e6).toFixed(0)+' µin'),r.TpdSrc],
+    ['Crest ø tolerance',(SYS==='iso'?(r.Tcd==null?'—':r.Tcd+' µm'):(r.Tcd*1e6).toFixed(0)+' µin'),r.TcdSrc],
+    [],
+    [H('Verification')],
+    [{v:'VERIFIED - ISO 965-1:1998 Tables 1-6 transcribed verbatim from the standard.',s:S.note}],
+    [{v:'VERIFIED - ISO 965-3:1998 Table 1: external minor diameter = one value, -(|es| + H/6), for stress calculation.',s:S.note}],
+    [{v:'VERIFIED - ISO 965-1 and ISO 965-3 both omit a maximum major diameter for internal threads.',s:S.note}],
+    [{v:'VERIFIED - FED-STD-H28/2B Table II.A.1: 100% of thread = 0,75H; UN internal minor D1min = D - 1,082532p, TD1 = 0,25p - 0,4p^2.',s:S.note}],
+    [{v:'CHECKED - UN tolerance formulae (ASME B1.1 sec.5, cited by H28/2B 5.2.2) reproduce published limits for 1/4-20, 3/8-16, 1/2-13, 3/4-10 and 1-8 UNC: 39 of 40 values exact.',s:S.note}],
+    [{v:'NOT VERIFIED - lead-angle correction term (Machinery\'s Handbook form). Off by default.',s:S.note}],
+    [{v:'NOT AVAILABLE - ISO 1502 Tables 4-9 / clause 13 gauge tolerances and wear. Left as user input, not invented.',s:S.note}]
+  ];
+  sheets.push({name:'Sources',rows:ref,widths:[46,22,30]});
+  return sheets;
+}
+function fileBase(r){
+  const base = SYS==='iso' ? ('M'+fmtP(r.D)+'x'+fmtP(r.P)) : (fmtP(r.D)+'-'+fmtP(Math.round(1/r.P)));
+  return (base+'_'+r.clsStr+(r.ext?'_ext':'_int')).replace(/[^A-Za-z0-9_.-]/g,'');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   WIRING
+   ══════════════════════════════════════════════════════════════════════════════ */
+function fillSelect(sel,vals,def){
+  sel.innerHTML=vals.map(v=>'<option'+(String(v)===String(def)?' selected':'')+'>'+v+'</option>').join('');
+}
+function refreshClassOptions(){
+  const ext=$('ttype').value==='ext';
+  if(SYS==='iso'){
+    const pdG=$('pdGrade').value,cdG=$('cdGrade').value,pdP=$('pdPos').value,cdP=$('cdPos').value;
+    fillSelect($('pdGrade'), ext?[3,4,5,6,7,8,9]:[4,5,6,7,8], pdG||6);
+    fillSelect($('cdGrade'), ext?[4,6,8]:[4,5,6,7,8], cdG||6);
+    fillSelect($('pdPos'), ext?['e','f','g','h']:['G','H'], ext?(['e','f','g','h'].includes(pdP)?pdP:'g'):(['G','H'].includes(pdP)?pdP:'H'));
+    fillSelect($('cdPos'), ext?['e','f','g','h']:['G','H'], ext?(['e','f','g','h'].includes(cdP)?cdP:'g'):(['G','H'].includes(cdP)?cdP:'H'));
+  } else {
+    const cur=$('unClass').value;
+    const opts = ext?['1A','2A','3A']:['1B','2B','3B'];
+    fillSelect($('unClass'), opts, opts.includes(cur)?cur:(ext?'2A':'2B'));
+  }
+}
+function refreshPresets(){
+  if(SYS==='iso'){
+    $('preset').innerHTML='<option value="">— custom —</option>'+PRESETS.map(([d,p])=>
+      '<option value="'+d+','+p+'">M'+fmtP(d)+' × '+fmtP(p)+(COARSE[d]===p?'  (coarse)':'')+'</option>').join('');
+  } else {
+    $('preset').innerHTML='<option value="">— custom —</option>'+UN_SIZES.map(([n,d,t])=>
+      '<option value="'+d+','+t+'">'+n+'</option>').join('');
+  }
+}
+function syncSystem(){
+  const iso=SYS==='iso';
+  $('isoCls').style.display=iso?'':'none';
+  $('unCls').style.display=iso?'none':'';
+  $('lblDnom').textContent='Basic major diameter D, d ('+(iso?'mm':'in')+')';
+  $('lblPitch').textContent=iso?'Pitch P (mm)':'Threads per inch (tpi)';
+  $('lblEngMan').textContent='Engagement length ('+(iso?'mm':'in')+')';
+  $('lblWire').textContent='Wire diameter ('+$('dunit').value+')';
+  $('dunit').value = iso?'mm':'in';
+  $('drillSet').value = iso?'metric':'inch';
+  $('sysHint').innerHTML = iso
+    ? 'Presets: ISO 261 coarse + ISO 262 fine. Tolerances from ISO 965-1:1998 Tables 1–6 (verbatim).'
+    : 'Presets: UNC / UNF / UNEF. Tolerances from the ASME B1.1 §5 formulae, checked against published limits.';
+  $('clsHint').innerHTML = iso
+    ? 'Crest ø = major ø for external, minor ø for internal. Equal grade/position pairs collapse the designation (e.g. 6H, 6g).'
+    : 'Classes 1A/2A/3A are external, 1B/2B/3B internal. 1A and 2A carry an allowance of 0,3 × the class-2A pitch-ø tolerance; 3A has none.';
+  refreshPresets(); refreshClassOptions();
+}
+function syncPlat(){ $('platInputs').classList.toggle('na',$('platMode').value==='off'); }
+function syncEng(){ $('engManWrap').classList.toggle('na',$('engMode').value!=='man'); }
+function syncWire(){ $('wireManWrap').classList.toggle('na',$('wireMode').value!=='man'); }
+
+window.addEventListener('DOMContentLoaded',()=>{
+  syncSystem(); syncPlat(); syncEng(); syncWire();
+
+  $('sysTabs').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-sys]'); if(!b) return;
+    [...$('sysTabs').children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); SYS=b.dataset.sys;
+    if(SYS==='iso'){ $('dnom').value='14'; $('pitch').value='1'; }
+    else { $('dnom').value='0.25'; $('pitch').value='20'; }
+    syncSystem(); render();
+  });
+  $('preset').addEventListener('change',e=>{
+    if(!e.target.value) return;
+    const [d,p]=e.target.value.split(',');
+    $('dnom').value=d; $('pitch').value=p; render();
+  });
+  $('ttype').addEventListener('change',()=>{refreshClassOptions();render();});
+  ['dnom','pitch','starts','engMan','tmin','tmax','pctThread','wireMan','gTol','gWear'].forEach(id=>
+    $(id).addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(render,220);}));
+  ['pdGrade','pdPos','cdGrade','cdPos','unClass','unForm','hand','dp','dunit','drillSet','leadCorr'].forEach(id=>
+    $(id).addEventListener('change',render));
+  $('dunit').addEventListener('change',()=>{$('lblWire').textContent='Wire diameter ('+$('dunit').value+')';});
+  $('platMode').addEventListener('change',()=>{syncPlat();render();});
+  $('engMode').addEventListener('change',()=>{syncEng();render();});
+  $('wireMode').addEventListener('change',()=>{syncWire();render();});
+  $('calc').addEventListener('click',render);
+
+  $('xlsx').addEventListener('click',()=>{
+    const r=LAST||compute();
+    if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
+    saveBlob(buildXlsx(exportRows(r)), fileBase(r)+'.xlsx');
+  });
+  $('csv').addEventListener('click',()=>{
+    const r=LAST||compute();
+    if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
+    const lines=[];
+    exportRows(r).forEach(sh=>{
+      lines.push('### '+sh.name);
+      sh.rows.forEach(row=>lines.push(row.map(c=>{
+        let v=(c&&typeof c==='object')?c.v:c; if(v==null)v=''; v=String(v);
+        return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+      }).join(',')));
+      lines.push('');
+    });
+    saveBlob(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}), fileBase(r)+'.csv');
+  });
+
+  render();
+});
+</script>
+</body>
+</html>

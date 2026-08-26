@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thread Calculator — ISO M &amp; Unified UN</title>
+<style>
+:root{
+  --bg:#12151a; --panel:#1a1f27; --panel2:#20262f; --line:#2c3542;
+  --ink:#e6ebf2; --dim:#8fa0b5; --accent:#5ac8fa; --accent2:#7ee081;
+  --warn:#ffb454; --err:#ff6b6b; --mono:"Consolas","SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{background:linear-gradient(90deg,#1c2430,#141a22);border-bottom:1px solid var(--line);
+  padding:14px 20px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px;letter-spacing:.4px}
+.badge{font:11px var(--mono);background:#243040;color:var(--accent);padding:3px 8px;border-radius:10px;border:1px solid #2f3f52}
+.sub{color:var(--dim);font-size:12px}
+main{max-width:1560px;margin:0 auto;padding:18px 20px 60px;display:grid;grid-template-columns:392px 1fr;gap:18px;align-items:start}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:16px;overflow:hidden}
+h2{margin:0;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);
+  padding:9px 13px;background:var(--panel2);border-bottom:1px solid var(--line);font-weight:600}
+h2 .n{color:var(--accent);margin-right:7px;font-family:var(--mono)}
+.body{padding:13px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:11px;color:var(--dim);letter-spacing:.3px}
+input,select{background:#0e1218;border:1px solid #333f4e;color:var(--ink);padding:6px 8px;border-radius:5px;font:13px var(--mono);width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.field.na input,.field.na select{opacity:.35;pointer-events:none}
+.na{opacity:.5}
+button{background:#22405c;border:1px solid #33587b;color:#cfe8ff;padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+button:hover{background:#2b5175}
+button.alt{background:#243b2c;border-color:#356b45;color:#cdf0d6}
+button.alt:hover{background:#2e4d38}
+.btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+table{width:100%;border-collapse:collapse;font:12.5px var(--mono)}
+th,td{padding:5px 9px;text-align:right;border-bottom:1px solid #232b36}
+th{color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.4px;text-transform:uppercase;background:#1d232c;text-align:right}
+th:first-child,td:first-child{text-align:left}
+td.lab{color:var(--dim);font-family:"Segoe UI",sans-serif;font-size:12.5px}
+tr.grp td{background:#1b222b;color:var(--accent);font-weight:600;font-family:"Segoe UI",sans-serif;
+  letter-spacing:.4px;font-size:11.5px;text-transform:uppercase;padding:7px 9px}
+td.max{color:#9fd8ff}td.min{color:#ffcf9f}td.mid{color:var(--ink)}
+.note{font-size:11.5px;color:var(--dim);padding:9px 13px;border-top:1px solid var(--line);background:#161b22;line-height:1.55}
+.note b{color:#b8c6d6}
+.flag{padding:8px 12px;border-radius:5px;margin:9px 0;font-size:12.5px;line-height:1.5}
+.flag.warn{background:#3a2c14;border:1px solid #6b5220;color:#ffd79a}
+.flag.err{background:#3a1a1a;border:1px solid #6b2b2b;color:#ffb3b3}
+.flag.ok{background:#16301f;border:1px solid #2b6b40;color:#b3f0c8}
+.flag.info{background:#152634;border:1px solid #2a4d69;color:#a9d5f0}
+.hint{font-size:11px;color:#6c7d92;margin-top:5px;line-height:1.5}
+.desig{font:20px var(--mono);color:var(--accent2);letter-spacing:1px}
+.pill{display:inline-block;font:11px var(--mono);background:#243040;color:var(--accent);padding:2px 7px;border-radius:9px;border:1px solid #2f3f52;margin-left:6px}
+.pill.src{background:#1d2a1f;color:#9fe0ab;border-color:#2f5236}
+a.rescue{color:var(--accent);font-size:12px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1280px){.cols2{grid-template-columns:1fr}}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);background:var(--panel2)}
+.tabs button{background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;
+  color:var(--dim);font-size:12px;letter-spacing:.6px;text-transform:uppercase;padding:9px 15px;font-weight:600}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);background:#1a222c}
+
+/* ── HISTORY LIST — every thread computed on this machine, newest first ── */
+.hist-list{display:flex;flex-direction:column;max-height:360px;overflow-y:auto;border-top:1px solid var(--line)}
+.hist-empty{font:11px var(--mono);color:#6c7d92;padding:14px 13px;letter-spacing:.5px}
+.hist-row{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center;
+  padding:9px 13px;border-bottom:1px solid #232b36}
+.hist-row:last-child{border-bottom:none}
+.hist-row:hover{background:var(--panel2)}
+.hist-desig{font:13px var(--mono);color:var(--accent2);letter-spacing:.4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-meta{font:10.5px var(--mono);color:#6c7d92;letter-spacing:.3px;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-note{color:var(--dim)}
+.hist-kinds{color:var(--accent)}
+.hist-btns{display:flex;gap:6px}
+.hist-btns button{font-size:11px;padding:5px 9px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>Thread Calculator</h1>
+  <span class="badge" id="badge">v6</span>
+  <span class="sub">ISO metric M &amp; Unified inch UN/UNR &middot; tolerances &middot; pre-plating &middot; pre-plate gauges &middot; tapping drills &middot; gauges &middot; history &middot; Excel</span>
+</header>
+
+<main>
+<!-- ================= LEFT ================= -->
+<div>
+  <section>
+    <div class="tabs" id="sysTabs">
+      <button data-sys="iso" class="on">ISO metric (M)</button>
+      <button data-sys="un">Unified inch (UN)</button>
+    </div>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Standard size (preset)</label>
+        <select id="preset"><option value="">— custom —</option></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label id="lblDnom">Basic major diameter D, d (mm)</label>
+          <input id="dnom" value="14">
+        </div>
+        <div class="field">
+          <label id="lblPitch">Pitch P (mm)</label>
+          <input id="pitch" value="1">
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>Thread type</label>
+          <select id="ttype">
+            <option value="int">Internal</option>
+            <option value="ext">External</option>
+          </select>
+        </div>
+        <div class="field"><label>Starts</label><input id="starts" value="1"></div>
+        <div class="field">
+          <label>Hand</label>
+          <select id="hand"><option value="RH">RH</option><option value="LH">LH</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Display units</label>
+          <select id="dunit"><option value="mm">mm</option><option value="in">inch</option></select>
+        </div>
+        <div class="field">
+          <label>Decimals</label>
+          <select id="dp"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+        </div>
+      </div>
+      <div class="hint" id="sysHint"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>Tolerance class</h2>
+    <div class="body">
+      <!-- ISO class controls -->
+      <div id="isoCls">
+        <div class="row">
+          <div class="field"><label>Pitch &oslash; grade</label><select id="pdGrade"></select></div>
+          <div class="field"><label>Pitch &oslash; position</label><select id="pdPos"></select></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Crest &oslash; grade</label><select id="cdGrade"></select></div>
+          <div class="field"><label>Crest &oslash; position</label><select id="cdPos"></select></div>
+        </div>
+      </div>
+      <!-- UN class controls -->
+      <div id="unCls" style="display:none">
+        <div class="row">
+          <div class="field"><label>Class</label><select id="unClass"></select></div>
+          <div class="field"><label>Form</label>
+            <select id="unForm"><option value="UN">UN (flat or round root)</option><option value="UNR">UNR (rounded root, ext only)</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:9px">
+        <label>Length of thread engagement</label>
+        <select id="engMode">
+          <option value="auto">Auto</option>
+          <option value="man">Manual value</option>
+        </select>
+      </div>
+      <div class="field na" id="engManWrap">
+        <label id="lblEngMan">Engagement length (mm)</label>
+        <input id="engMan" value="10">
+      </div>
+      <div class="hint" id="clsHint"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Pre-plating / coating</h2>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Coating compensation</label>
+        <select id="platMode">
+          <option value="off">Off</option>
+          <option value="after">Class applies AFTER plating &rarr; pre-plate limits</option>
+          <option value="before">Class applies BEFORE plating &rarr; as-plated</option>
+        </select>
+      </div>
+      <div class="row" id="platInputs">
+        <div class="field"><label>Min coating (&micro;m)</label><input id="tmin" value="5"></div>
+        <div class="field"><label>Max coating (&micro;m)</label><input id="tmax" value="12"></div>
+      </div>
+      <div class="hint"><b>4&times; rule:</b> flank coating <i>t</i> moves pitch &oslash; by <b>4t</b>, crest &oslash; by <b>2t</b>
+        (ASME B1.13M &sect;8 / B1.1 &sect;7).</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span>Tapping drill</h2>
+    <div class="body">
+      <div class="row">
+        <div class="field">
+          <label>Target thread engagement (%)</label>
+          <input id="pctThread" value="75">
+        </div>
+        <div class="field">
+          <label>Drill set</label>
+          <select id="drillSet">
+            <option value="metric">Metric 0,05/0,1 mm</option>
+            <option value="inch">Inch: fraction / number / letter</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint"><b>100 % of thread = 0,75 H</b> (FED-STD-H28/2B Table II.A.1 note 1),
+        so hole = D &minus; (%/100) &times; 1,299038 &times; P.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span>Gauge &amp; inspection options</h2>
+    <div class="body">
+      <div class="field" style="margin-bottom:9px">
+        <label>Wire / ball measurement</label>
+        <select id="leadCorr">
+          <option value="off">Best-wire formula, no lead-angle correction</option>
+          <option value="on">Apply lead-angle correction (FED-STD-H28/6A §130)</option>
+        </select>
+        <div class="hint">Correction = <b>0,75·W·tan²λ</b>, i.e. (w·tan²λ′·cos&nbsp;α·cot&nbsp;α)/2 at
+          α&nbsp;=&nbsp;30°, from <b>FED-STD-H28/6A</b> Appendix&nbsp;D §130(a). That standard treats it as
+          significant only above <b>0,00015&nbsp;in = 3,81&nbsp;µm</b>; every ISO coarse thread M3–M36 sits
+          at 0,8–2,5&nbsp;µm, which is why OFF is the right default.</div>
+      </div>
+      <div class="field" style="margin-bottom:9px">
+        <label>Wire diameter</label>
+        <select id="wireMode">
+          <option value="best">Best size = 0,57735 &times; P</option>
+          <option value="man">Manual</option>
+        </select>
+      </div>
+      <div class="field na" id="wireManWrap">
+        <label id="lblWire">Wire diameter (mm)</label>
+        <input id="wireMan" value="0.866">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Gauge PD tolerance (&micro;m/&micro;in)</label>
+          <input id="gTol" value="">
+        </div>
+        <div class="field">
+          <label>GO gauge wear allow.</label>
+          <input id="gWear" value="">
+        </div>
+      </div>
+      <div class="hint">Leave blank to use the ISO 1502 Tables 4–5 values automatically. Fill in only to override.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">06</span>Output</h2>
+    <div class="body">
+      <div class="btns">
+        <button id="calc">Compute</button>
+        <button class="alt" id="xlsx">Download Excel (.xlsx)</button>
+        <button class="alt" id="csv">CSV</button>
+      </div>
+      <div id="saveMsg" style="margin-top:9px"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= RIGHT ================= -->
+<div>
+  <section>
+    <h2><span class="n">07</span>Result</h2>
+    <div class="body" id="head"></div>
+    <div id="flags" style="padding:0 13px 4px"></div>
+  </section>
+
+  <div class="cols2">
+    <div>
+      <section>
+        <h2><span class="n">08</span>Diameter limits</h2>
+        <table id="tDia"></table>
+        <div class="note" id="diaNote"></div>
+      </section>
+      <section>
+        <h2><span class="n">09</span>Tapping drill</h2>
+        <table id="tTap"></table>
+        <div class="note" id="tapNote"></div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2><span class="n">10</span>Tolerances &amp; deviations</h2>
+        <table id="tTol"></table>
+      </section>
+      <section>
+        <h2><span class="n">11</span>Gauges &amp; inspection</h2>
+        <table id="tGeo"></table>
+        <div class="note" id="geoNote"></div>
+      </section>
+    </div>
+  </div>
+
+  <section id="platSec" style="display:none">
+    <h2><span class="n">12</span>Pre-plating limits</h2>
+    <table id="tPlat"></table>
+    <div class="note" id="platNote"></div>
+
+    <div class="row" style="margin-top:18px">
+      <div class="field">
+        <label for="pgMode">Pre-plate gauge convention</label>
+        <select id="pgMode">
+          <option value="taylor" selected>C — Taylor, unilateral into band</option>
+          <option value="isoTd2">A — ISO 1502, indexed on class tolerance</option>
+        </select>
+        <div class="hint">C (default) sits the gauge on the limit with the tolerance applied
+          inward, so the pair accepts exactly the legal band and cannot pass a bad thread.
+          A follows ISO 1502 placement and can accept out-of-limit threads by design — it
+          favours not falsely rejecting good parts. The acceptance audit in the table below
+          shows what each one actually passes.</div>
+      </div>
+      <div class="field">
+        <label for="pgTol">Gauge tolerance for C</label>
+        <input id="pgTol" type="number" step="0.1" min="0.1" value="8">
+        <div class="hint">µm (µin for inch). Used by convention C only — no standard tabulates
+          this case. ISO 1502 would give 6–22 µm depending on the tolerance. Default 8 µm
+          (Emil, 26.08.2026): it costs 2·(8−5) = 6 µm of shop window against the old 5 µm and
+          buys a gauge that can actually be made and re-certified.</div>
+      </div>
+    </div>
+
+    <table id="tPlatG" style="margin-top:18px"></table>
+    <div class="note" id="platGNote"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">13</span>History &mdash; threads computed on this machine</h2>
+    <div class="body">
+      <div class="row">
+        <div class="field">
+          <label>Designation &mdash; labels the entry</label>
+          <input id="histName" value="" readonly tabindex="-1">
+          <div class="hint">Follows the computed designation in section 07 &mdash; one place a
+            thread is named, not two that can disagree.</div>
+        </div>
+        <div class="field">
+          <label for="histNote">Note &mdash; part no. / job / for whom</label>
+          <input id="histNote" value="" placeholder="(optional)">
+          <div class="hint">Free text. Saved with the entry and shown in the list.</div>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:9px">Every <b>Compute</b> and every Excel/CSV export is
+        logged automatically with the <b>complete input set</b> &mdash; system, size, class, thread
+        type, coating spec and mode, tapping and wire inputs, gauge overrides, the pre-plate gauge
+        convention and its tolerance, and the display units. <b>Load</b> puts an entry straight back
+        into the form, so a thread is never re-typed. Computing the same values again updates the
+        existing entry instead of adding a duplicate. Stored in this browser on this machine only
+        &mdash; use <b>Export</b> to back it up or hand it on, <b>Import</b> to merge a file back in.</div>
+      <div class="btns">
+        <button class="alt" id="histSave">Save current values</button>
+        <button class="alt" id="histExp">Export .json</button>
+        <button class="alt" id="histImpBtn">Import .json</button>
+        <button id="histClear" style="background:#4a2630;border-color:#7b3346;color:#ffcdd6">Clear all</button>
+      </div>
+      <input type="file" id="histFile" accept="application/json,.json" style="display:none">
+      <div id="histMsg" style="margin-top:9px"></div>
+    </div>
+    <div class="hist-list" id="histList"></div>
+  </section>
+</div>
+</main>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════════════
+   SOURCES AND VERIFICATION STATUS
+   ──────────────────────────────────────────────────────────────────────────────
+   [V] BS ISO 965-1:1998 Tables 1–6  — transcribed verbatim (see note in code).
+   [V] ISO 965-1 clause 11           — Cmax / Cmin / Rmin formulae.
+   [V] ISO 965-3:1998 Table 1        — external minor ø is ONE value:
+                                       deviation = −(|es| + H/6) "for stress calculation".
+                                       Verified: P=0,2 es=−17 → −45,87 ≈ −46 (table).
+   [V] ISO 965-1 + ISO 965-3         — neither tabulates a MAX major ø for internal
+                                       threads. Root-form limited (clause 11).
+   [V] FED-STD-H28/2B Table II.A.1   — "100 % of thread = 0,75 H". Reproduces the
+                                       standard's own percent columns exactly
+                                       (1.750-8 UN min 1.615 → 83,14 % vs 83,1 table).
+   [V] FED-STD-H28/2B Tbl II.A.3/4  — UN internal minor ø. D1min = D − 1,082532p holds
+                                       throughout. The MAXIMUM is now taken from the
+                                       tables verbatim (II.A.3 = classes 1B/2B,
+                                       II.A.4 = class 3B), not from 0,25p − 0,4p²:
+                                       that formula matches the 1B/2B column only from
+                                       ~No. 10 up (below it under-reads by up to
+                                       0,0030 in) and NEVER matches 3B (up to 0,0043 in
+                                       oversize, worst 0,0105 in at 1 3/8-6 UNC).
+                                       Now COMPLETE: 41 paired sizes #0-80 … 7/16-32
+                                       plus 174 class-3B sizes 1/2 … 3 1/4 in, every one
+                                       cross-checked against the standard's own
+                                       percent-of-thread columns (0 failures). For 1B/2B
+                                       above No. 10 the formula is exact — proved on 120
+                                       sizes — so no table is carried there.
+   [C] ASME B1.1 §5 (via H28/2B §5.2.2) — UN tolerance formulae. Not read directly;
+                                       implementation CHECKED against published limits
+                                       for 1/4-20, 3/8-16, 1/2-13, 3/4-10, 1-8 UNC:
+                                       39 of 40 values exact, 1 off by 0,0001 in (table
+                                       rounding).
+   [V] Lead-angle correction         — TRACED to FED-STD-H28/6A (March 1985) Appendix D
+                                       §130(a), which gives the term as
+                                       (w·tan²λ′·cos α·cot α)/2 — for α = 30° exactly the
+                                       0,75·W·tan²λ used here. Self-consistency proof:
+                                       H28/6A calls the correction significant when that
+                                       term exceeds 0,00015 in, and states the equivalent
+                                       criterion as d2·√n/L "less than" 17,1 (the sense
+                                       corrected by Change Notice 1; the 1985 sheet
+                                       misprints "greater"). Solving 0,75·w·tan²λ =
+                                       0,00015 with best-size wires gives d2·√n/L =
+                                       17,1023 — four figures. Sign from geometry.
+                                       Kept OFF by default, and correctly so: 0,00015 in
+                                       = 3,81 µm, and every ISO coarse thread M3…M36
+                                       lands at 0,77–2,52 µm, i.e. below the standard's
+                                       own threshold (M10×1,5 = 1,82 µm).
+   [V] ISO 1502 clause 13 + T10/T12  — NOT GO placement, previously the last assumed value,
+                                       now from the standard. T12: NOT GO screw PLUG pitch ø =
+                                       D2 + EI + T_D2 + T_PL/2 ± T_PL/2 → zone D2max … D2max+T_PL,
+                                       wholly OUTSIDE the workpiece band. T10 rows 12/16: solid
+                                       NOT GO RING centre = d2min − T_R/2 → zone d2min−T_R … d2min.
+                                       Wear limits from T12 notes 1/2 (plug −W, ring +W).
+                                       The old "extends inward" guess was out by a full T_PL/T_R.
+                                       PLUG CREST/CLEARING ø now complete as well: GO major ø =
+                                       D + EI + Z_PL, NOT GO major ø = D2 + EI + T_D2 + T_PL/2
+                                       + 2F1, clearing ø max = D1 + EI − H/6. **F1 = 0,1P**,
+                                       stated on figures 7 and 8 (identical external/internal) —
+                                       the last unsourced symbol, now closed. Figures also give
+                                       b2max = P/4, r2max = 0,144P = H/6 (fig 5, external) and
+                                       b1max = P/8, r1max = 0,072P = H/12 (fig 6, internal);
+                                       truncated b3 = P/2 − 2·F2·tan30°, F2 from table 3 — the
+                                       only ISO 1502 symbol still unheld, and it affects the
+                                       clearance-groove width only, never a measured size.
+   [V] ASME B1.2-1983 T4 + T6        — UN inch gauge placement and class-X tolerances, from the
+                                       standard itself. TABLE 4 is the rule table: the gage basic
+                                       size sits exactly ON the product limit with the gagemaker's
+                                       tolerance applied UNILATERALLY INWARD (row 3 GO ring = max
+                                       PD ext, tol minus; row 5 NOT GO ring = min PD ext, tol plus;
+                                       row 10 GO plug = min PD int, tol plus; row 12 NOT GO plug =
+                                       max PD int, tol minus). BOTH zones therefore lie INSIDE the
+                                       product band — the OPPOSITE of ISO 1502, whose NOT GO zone
+                                       sits outside it. Proved against B1.2's own identification
+                                       examples for 1/4-20, all four exact: 2B GO plug .2175,
+                                       2B NOT GO plug .2224, 2A GO ring .2164, 2A NOT GO ring
+                                       .2127 — which also re-validates the B1.1 2A/2B formulae.
+                                       TABLE 6 (class X, 28 rows) transcribed, structurally
+                                       validated, then CONFIRMED cell-for-cell against a zoomed
+                                       re-read of p.18 — no corrections. §3.5: X is the default
+                                       for any gage directly checking product.
+                                       TABLE 8 (plain cylindrical gages, 7 size bands ×
+                                       XX/X/Y/Z/ZZ) also in, applied per its note 2 at class Z
+                                       to the plain minor-ø plug (internal) and major-ø ring
+                                       (external), placed by Table 4 rows 7/8 and 13/14.
+                                       TABLE 9 (computing constants) confirms the two constants
+                                       this whole tool is built on: col 11 "twice external thread
+                                       height 2h = 0,649519p" and col 14 "double height of
+                                       internal thread 1,25H = 1,082532p" — exactly the d2b and
+                                       d1b constants used throughout, now sourced from ASME as
+                                       well as ISO. Table 9 needs no embedding: every constant in
+                                       it is computed exactly from p.
+                                       TABLE 7 (class W, thread-SETTING gages per §3.5 / §5.1.1)
+                                       now in too. The p.25 scan clips leading zeros (.0015
+                                       printed for .00015), so it was reconstructed and then
+                                       POLICED against the confirmed Table 6: §3.5 forbids W > X,
+                                       and across 256 compared cells there are ZERO violations.
+                                       The pattern is itself the evidence — W is tighter than X
+                                       on lead, half-angle and pitch ø, and EQUAL to X on
+                                       major/minor ø throughout (64 cells). W is reported for
+                                       reference only; it is never applied to product gauges.
+                                       B1.2 IS NOW COMPLETE for everything this tool does.
+   [-] ISO 1502 gauge tolerances     — (historic) Tables 4–9 and clause 13 could NOT be obtained
+                                       (only the 12-page preview). Gauge TARGET sizes
+                                       below follow the Taylor principle and are exact;
+                                       gauge-making tolerance / wear are USER INPUT and
+                                       are left blank rather than invented.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────── ISO 965-1 data (verbatim tables) ─────────────── */
+const FD = {
+  0.2:{G:17,e:null,f:null,g:-17},   0.25:{G:18,e:null,f:null,g:-18},
+  0.3:{G:18,e:null,f:null,g:-18},   0.35:{G:19,e:null,f:-34,g:-19},
+  0.4:{G:19,e:null,f:-34,g:-19},    0.45:{G:20,e:null,f:-35,g:-20},
+  0.5:{G:20,e:-50,f:-36,g:-20},     0.6:{G:21,e:-53,f:-36,g:-21},
+  0.7:{G:22,e:-56,f:-38,g:-22},     0.75:{G:22,e:-56,f:-38,g:-22},
+  0.8:{G:24,e:-60,f:-38,g:-24},     1:{G:26,e:-60,f:-40,g:-26},
+  1.25:{G:28,e:-63,f:-42,g:-28},    1.5:{G:32,e:-67,f:-45,g:-32},
+  1.75:{G:34,e:-71,f:-48,g:-34},    2:{G:38,e:-71,f:-52,g:-38},
+  2.5:{G:42,e:-80,f:-58,g:-42},     3:{G:48,e:-85,f:-63,g:-48},
+  3.5:{G:53,e:-90,f:-70,g:-53},     4:{G:60,e:-95,f:-75,g:-60},
+  4.5:{G:63,e:-100,f:-80,g:-63},    5:{G:71,e:-106,f:-85,g:-71},
+  5.5:{G:75,e:-112,f:-90,g:-75},    6:{G:80,e:-118,f:-95,g:-80},
+  8:{G:100,e:-140,f:-118,g:-100}
+};
+const TD1 = {
+  0.2:[38,null,null,null,null], 0.25:[45,56,null,null,null], 0.3:[53,67,85,null,null],
+  0.35:[63,80,100,null,null],   0.4:[71,90,112,null,null],   0.45:[80,100,125,null,null],
+  0.5:[90,112,140,180,null],    0.6:[100,125,160,200,null],  0.7:[112,140,180,224,null],
+  0.75:[118,150,190,236,null],  0.8:[125,160,200,250,315],   1:[150,190,236,300,375],
+  1.25:[170,212,265,335,425],   1.5:[190,236,300,375,475],   1.75:[212,265,335,425,530],
+  2:[236,300,375,475,600],      2.5:[280,355,450,560,710],   3:[315,400,500,630,800],
+  3.5:[355,450,560,710,900],    4:[375,475,600,750,950],     4.5:[425,530,670,850,1060],
+  5:[450,560,710,900,1120],     5.5:[475,600,750,950,1180],  6:[500,630,800,1000,1250],
+  8:[630,800,1000,1250,1600]
+};
+const TD1_GRADES=[4,5,6,7,8];
+const TDMAJ = {
+  0.2:[36,56,null], 0.25:[42,67,null], 0.3:[48,75,null], 0.35:[53,85,null],
+  0.4:[60,95,null], 0.45:[63,100,null],0.5:[67,106,null],0.6:[80,125,null],
+  0.7:[90,140,null],0.75:[90,140,null],0.8:[95,150,236], 1:[112,180,280],
+  1.25:[132,212,335],1.5:[150,236,375],1.75:[170,265,425],2:[180,280,450],
+  2.5:[212,335,530],3:[236,375,600],  3.5:[265,425,670], 4:[300,475,750],
+  4.5:[315,500,800],5:[335,530,850],  5.5:[355,560,900], 6:[375,600,950],
+  8:[450,710,1180]
+};
+const TDMAJ_GRADES=[4,6,8];
+const DRANGES=[[0.99,1.4],[1.4,2.8],[2.8,5.6],[5.6,11.2],[11.2,22.4],[22.4,45],[45,90],[90,180],[180,355]];
+const TD2=[
+ {0.2:[40,null,null,null,null],0.25:[45,56,null,null,null],0.3:[48,60,75,null,null]},
+ {0.2:[42,null,null,null,null],0.25:[48,60,null,null,null],0.35:[53,67,85,null,null],
+  0.4:[56,71,90,null,null],0.45:[60,75,95,null,null]},
+ {0.35:[56,71,90,null,null],0.5:[63,80,100,125,null],0.6:[71,90,112,140,null],
+  0.7:[75,95,118,150,null],0.75:[75,95,118,150,null],0.8:[80,100,125,160,200]},
+ {0.75:[85,106,132,170,null],1:[95,118,150,190,236],1.25:[100,125,160,200,250],1.5:[112,140,180,224,280]},
+ {1:[100,125,160,200,250],1.25:[112,140,180,224,280],1.5:[118,150,190,236,300],
+  1.75:[125,160,200,250,315],2:[132,170,212,265,335],2.5:[140,180,224,280,355]},
+ {1:[106,132,170,212,null],1.5:[125,160,200,250,315],2:[140,180,224,280,355],
+  3:[170,212,265,335,425],3.5:[180,224,280,355,450],4:[190,236,300,375,475],4.5:[200,250,315,400,500]},
+ {1.5:[132,170,212,265,335],2:[150,190,236,300,375],3:[180,224,280,355,450],
+  4:[200,250,315,400,500],5:[212,265,335,425,530],5.5:[224,280,355,450,560],6:[236,300,375,475,600]},
+ {2:[160,200,250,315,400],3:[190,236,300,375,475],4:[212,265,335,425,530],6:[250,315,400,500,630],8:[280,355,450,560,710]},
+ {3:[212,265,335,425,530],4:[236,300,375,475,600],6:[265,335,425,530,670],8:[300,375,475,600,750]}
+];
+const TD2_GRADES=[4,5,6,7,8];
+const TD2E=[
+ {0.2:[24,30,38,48,null,null,null],0.25:[26,34,42,53,null,null,null],0.3:[28,36,45,56,null,null,null]},
+ {0.2:[25,32,40,50,null,null,null],0.25:[28,36,45,56,null,null,null],0.35:[32,40,50,63,80,null,null],
+  0.4:[34,42,53,67,85,null,null],0.45:[36,45,56,71,90,null,null]},
+ {0.35:[34,42,53,67,85,null,null],0.5:[38,48,60,75,95,null,null],0.6:[42,53,67,85,106,null,null],
+  0.7:[45,56,71,90,112,null,null],0.75:[45,56,71,90,112,null,null],0.8:[48,60,75,95,118,150,190]},
+ {0.75:[50,63,80,100,125,null,null],1:[56,71,90,112,140,180,224],1.25:[60,75,95,118,150,190,236],1.5:[67,85,106,132,170,212,265]},
+ {1:[60,75,95,118,150,190,236],1.25:[67,85,106,132,170,212,265],1.5:[71,90,112,140,180,224,280],
+  1.75:[75,95,118,150,190,236,300],2:[80,100,125,160,200,250,315],2.5:[85,106,132,170,212,265,335]},
+ {1:[63,80,100,125,160,200,250],1.5:[75,95,118,150,190,236,300],2:[85,106,132,170,212,265,335],
+  3:[100,125,160,200,250,315,400],3.5:[106,132,170,212,265,335,425],4:[112,140,180,224,280,355,450],
+  4.5:[118,150,190,236,300,375,475]},
+ {1.5:[80,100,125,160,200,250,315],2:[90,112,140,180,224,280,355],3:[106,132,170,212,265,335,425],
+  4:[118,150,190,236,300,375,475],5:[125,160,200,250,315,400,500],5.5:[132,170,212,265,335,425,530],
+  6:[140,180,224,280,355,450,560]},
+ {2:[95,118,150,190,236,300,375],3:[112,140,180,224,280,355,450],4:[125,160,200,250,315,400,500],
+  6:[150,190,236,300,375,475,600],8:[170,212,265,335,425,530,670]},
+ {3:[125,160,200,250,315,400,500],4:[140,180,224,280,355,450,560],6:[160,200,250,315,400,500,630],
+  8:[180,224,280,355,450,560,710]}
+];
+const TD2E_GRADES=[3,4,5,6,7,8,9];
+const ENG=[
+ {0.2:[0.5,1.4],0.25:[0.6,1.7],0.3:[0.7,2]},
+ {0.2:[0.5,1.5],0.25:[0.6,1.9],0.35:[0.8,2.6],0.4:[1,3],0.45:[1.3,3.8]},
+ {0.35:[1,3],0.5:[1.5,4.5],0.6:[1.7,5],0.7:[2,6],0.75:[2.2,6.7],0.8:[2.5,7.5]},
+ {0.75:[2.4,7.1],1:[3,9],1.25:[4,12],1.5:[5,15]},
+ {1:[3.8,11],1.25:[4.5,13],1.5:[5.6,16],1.75:[6,18],2:[8,24],2.5:[10,30]},
+ {1:[4,12],1.5:[6.3,19],2:[8.5,25],3:[12,36],3.5:[15,45],4:[18,53],4.5:[21,63]},
+ {1.5:[7.5,22],2:[9.5,28],3:[15,45],4:[19,56],5:[24,71],5.5:[28,85],6:[32,95]},
+ {2:[12,36],3:[18,53],4:[24,71],6:[36,106],8:[45,132]},
+ {3:[20,60],4:[26,80],6:[40,118],8:[50,150]}
+];
+const REC_INT={fine:{S:['4H'],N:['5H'],L:['6H']},
+               medium:{S:['5H','(5G)'],N:['6H','6G'],L:['7H','(7G)']},
+               coarse:{S:[],N:['7H','(7G)'],L:['8H','(8G)']}};
+const REC_EXT={fine:{S:['(3h4h)'],N:['4h','(4g)'],L:['(5h4h)','(5g4g)']},
+               medium:{S:['(5h6h)','(5g6g)'],N:['6h','6g','6f','6e'],L:['(7h6h)','(7g6g)','(7e6e)']},
+               coarse:{S:[],N:['8g','(8e)'],L:['(9g8g)','(9e8e)']}};
+const PRESETS=[
+ [1,0.25],[1.2,0.25],[1.4,0.3],[1.6,0.35],[1.8,0.35],[2,0.4],[2.5,0.45],[2.5,0.35],
+ [3,0.5],[3,0.35],[3.5,0.6],[4,0.7],[4,0.5],[5,0.8],[5,0.5],[6,1],[6,0.75],[6,0.5],
+ [7,1],[7,0.75],[8,1.25],[8,1],[8,0.75],[8,0.5],[10,1.5],[10,1.25],[10,1],[10,0.75],
+ [12,1.75],[12,1.5],[12,1.25],[12,1],[14,2],[14,1.5],[14,1.25],[14,1],
+ [16,2],[16,1.5],[16,1],[18,2.5],[18,2],[18,1.5],[18,1],[20,2.5],[20,2],[20,1.5],[20,1],
+ [22,2.5],[22,2],[22,1.5],[22,1],[24,3],[24,2],[24,1.5],[24,1],
+ [27,3],[27,2],[27,1.5],[27,1],[30,3.5],[30,3],[30,2],[30,1.5],[30,1],
+ [33,3.5],[33,3],[33,2],[33,1.5],[36,4],[36,3],[36,2],[36,1.5],
+ [39,4],[39,3],[39,2],[39,1.5],[42,4.5],[42,4],[42,3],[42,2],[42,1.5],
+ [45,4.5],[45,4],[45,3],[45,2],[45,1.5],[48,5],[48,4],[48,3],[48,2],[48,1.5],
+ [52,5],[52,4],[52,3],[52,2],[52,1.5],[56,5.5],[56,4],[56,3],[56,2],[56,1.5],
+ [60,5.5],[60,4],[60,3],[60,2],[60,1.5],[64,6],[64,4],[64,3],[64,2],[64,1.5],
+ [68,6],[68,4],[68,3],[68,2],[72,6],[72,4],[72,3],[72,2],[76,6],[76,4],[76,3],[76,2],
+ [80,6],[80,4],[80,3],[80,2],[90,6],[90,4],[90,3],[90,2],[100,6],[100,4],[100,3],[100,2]
+];
+const COARSE={1:0.25,1.2:0.25,1.4:0.3,1.6:0.35,1.8:0.35,2:0.4,2.5:0.45,3:0.5,3.5:0.6,
+  4:0.7,5:0.8,6:1,7:1,8:1.25,10:1.5,12:1.75,14:2,16:2,18:2.5,20:2.5,22:2.5,24:3,27:3,
+  30:3.5,33:3.5,36:4,39:4,42:4.5,45:4.5,48:5,52:5,56:5.5,60:5.5,64:6,68:6,72:6,76:6,80:6,90:6,100:6};
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ISO 1502:1996 — GAUGES AND GAUGING  (Tables 4–9)
+   Transcribed from the published pages. All values in micrometres unless noted.
+   Tables 4, 5, 8 and 9 are indexed by the WORKPIECE tolerance, not by diameter.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Table 4 — tolerances and values m, Z_R and Z_PL for pitch diameters.
+   Index: workpiece pitch-ø tolerance Td2 or TD2 (µm), "over … up to and incl."   */
+const G_T4=[/* upTo, T_R, T_PL, T_CP, m, Z_R, Z_PL */
+ [50,   8,  6,  6, 10, -4,  0],
+ [80,  10,  7,  7, 12, -2,  2],
+ [125, 14,  9,  8, 15,  2,  6],
+ [200, 18, 11,  9, 18,  8, 12],
+ [315, 23, 14, 12, 22, 12, 16],
+ [500, 30, 18, 15, 27, 20, 24],
+ [670, 38, 22, 18, 33, 28, 32]
+];
+/* Table 5 — permissible wear on pitch diameters of GO and NOT GO plugs and rings */
+const G_T5=[/* upTo, W_GO ring, W_GO plug, W_NG ring, W_NG plug */
+ [50,  10,   8,    7,    6  ],
+ [80,  12,   9.5,  9,    7.5],
+ [125, 16,  12.5, 12,    9.5],
+ [200, 21,  17.5, 15,   11.5],
+ [315, 25.5,21,   19.5, 15  ],
+ [500, 33,  27,   25,   19  ],
+ [670, 41,  33,   31,   23  ]
+];
+/* Table 6 — tolerance for EACH FLANK ANGLE, in minutes of arc: [Tα1/2, Tα2/2] by pitch */
+const G_T6={
+ 0.2:[60,60],0.25:[48,48],0.3:[40,40],0.35:[35,35],0.4:[31,31],0.45:[26,26],
+ 0.5:[25,25],0.6:[21,21],0.7:[18,18],0.75:[17,17],0.8:[16,16],1:[15,16],
+ 1.25:[13,16],1.5:[12,16],1.75:[11,18],2:[10,14],2.5:[10,14],3:[9,13],
+ 3.5:[9,12],4:[8,11],4.5:[8,11],5:[8,11],5.5:[8,10],6:[8,10],8:[8,10]
+};
+/* Table 7 — pitch tolerance Tp (µm) by gauge thread length (mm) */
+const G_T7=[[32,5],[50,6],[80,7]];
+/* Table 8 — plain gauges for the MAJOR ø of external threads.
+   Index: workpiece major-ø tolerance Td (µm).  [upTo, H2/2, Hp/2, Z2]           */
+const G_T8=[[85,4,1,8],[140,5,1.5,20],[335,8,2,38],[850,15,3,54],[950,21,4,60]];
+/* Table 9 — plain gauges for the MINOR ø of internal threads.
+   Index: workpiece minor-ø tolerance TD1 (µm).  [upTo, H1/2, Z1]                */
+const G_T9=[[100,4,9],[180,5,22],[375,8,38],[710,13,52],[1250,23,65]];
+
+function gLookup(tbl,v){ for(const r of tbl) if(v<=r[0]) return r; return null; }
+
+/* ─────────────── Unified inch (UN) ─────────────── */
+/* Basic major ø of numbered sizes: D = 0,060 + 0,013 N  */
+function numSize(n){ return 0.060 + 0.013*n; }
+const UN_SIZES=[
+ ['#0-80 UNF',numSize(0),80],['#1-64 UNC',numSize(1),64],['#1-72 UNF',numSize(1),72],
+ ['#2-56 UNC',numSize(2),56],['#2-64 UNF',numSize(2),64],['#3-48 UNC',numSize(3),48],
+ ['#3-56 UNF',numSize(3),56],['#4-40 UNC',numSize(4),40],['#4-48 UNF',numSize(4),48],
+ ['#5-40 UNC',numSize(5),40],['#5-44 UNF',numSize(5),44],['#6-32 UNC',numSize(6),32],
+ ['#6-40 UNF',numSize(6),40],['#8-32 UNC',numSize(8),32],['#8-36 UNF',numSize(8),36],
+ ['#10-24 UNC',numSize(10),24],['#10-32 UNF',numSize(10),32],
+ ['#12-24 UNC',numSize(12),24],['#12-28 UNF',numSize(12),28],['#12-32 UNEF',numSize(12),32],
+ ['1/4-20 UNC',0.25,20],['1/4-28 UNF',0.25,28],['1/4-32 UNEF',0.25,32],
+ ['5/16-18 UNC',0.3125,18],['5/16-24 UNF',0.3125,24],['5/16-32 UNEF',0.3125,32],
+ ['3/8-16 UNC',0.375,16],['3/8-24 UNF',0.375,24],['3/8-32 UNEF',0.375,32],
+ ['7/16-14 UNC',0.4375,14],['7/16-20 UNF',0.4375,20],['7/16-28 UNEF',0.4375,28],
+ ['1/2-13 UNC',0.5,13],['1/2-20 UNF',0.5,20],['1/2-28 UNEF',0.5,28],
+ ['9/16-12 UNC',0.5625,12],['9/16-18 UNF',0.5625,18],['9/16-24 UNEF',0.5625,24],
+ ['5/8-11 UNC',0.625,11],['5/8-18 UNF',0.625,18],['5/8-24 UNEF',0.625,24],
+ ['3/4-10 UNC',0.75,10],['3/4-16 UNF',0.75,16],['3/4-20 UNEF',0.75,20],
+ ['7/8-9 UNC',0.875,9],['7/8-14 UNF',0.875,14],['7/8-20 UNEF',0.875,20],
+ ['1-8 UNC',1.0,8],['1-12 UNF',1.0,12],['1-20 UNEF',1.0,20],
+ ['1 1/8-7 UNC',1.125,7],['1 1/8-12 UNF',1.125,12],['1 1/4-7 UNC',1.25,7],['1 1/4-12 UNF',1.25,12],
+ ['1 3/8-6 UNC',1.375,6],['1 3/8-12 UNF',1.375,12],['1 1/2-6 UNC',1.5,6],['1 1/2-12 UNF',1.5,12],
+ ['1 3/4-5 UNC',1.75,5],['2-4 1/2 UNC',2.0,4.5],['2 1/4-4 1/2 UNC',2.25,4.5],
+ ['2 1/2-4 UNC',2.5,4],['2 3/4-4 UNC',2.75,4],['3-4 UNC',3.0,4]
+];
+/* ASME B1.1 §5 — pitch-diameter tolerance of class 2A is the master value */
+function unTd2_2A(D,p,LE){
+  return 0.0015*Math.cbrt(D) + 0.0015*Math.sqrt(LE) + 0.015*Math.cbrt(p*p);
+}
+const UN_PD_F={'1A':1.500,'2A':1.000,'3A':0.750,'1B':1.950,'2B':1.300,'3B':0.975};
+const UN_ALLOW_F={'1A':0.300,'2A':0.300,'3A':0};
+function unTdMaj(p,cls){ return (cls==='1A'?0.090:0.060)*Math.cbrt(p*p); }
+function unTD1(p){ return 0.25*p - 0.4*p*p; }
+
+/* Maximum minor ø of internal threads, inch — FED-STD-H28/2B Appendix II,
+   Table II.A.3 (classes 1B and 2B) and Table II.A.4 (class 3B), read from the
+   scanned standard.  Key 'D/tpi'; value [1B & 2B, 3B].
+   These are NOT reproducible from 0,25p − 0,4p²:
+     · that formula matches the 1B/2B column only from about No. 10 upward — for
+       the screw sizes it under-reads the tabulated max by 0,0013…0,0030 in.
+       Above No. 10 it IS exact: checked against Table II.A.3 on 120 sizes from
+       No. 10 to 3 1/4 in, every row inside the ±0,0005 print rounding, so no
+       1B/2B table is carried above 7/16;
+     · it never matches the 3B column at any size, running up to 0,0105 in
+       (0,27 mm) oversize at 1 3/8-6 UNC — see UN_D1MAX_3B for 1/2 in and above.
+   Same conclusion as ISO 965-1 Tables 1–6: the table is the only safe source.  */
+const UN_D1MAX={
+ '0.0600/80':[0.0514,0.0514], '0.0730/64':[0.0623,0.0623], '0.0730/72':[0.0635,0.0635],
+ '0.0860/56':[0.0737,0.0737], '0.0860/64':[0.0753,0.0753], '0.0990/48':[0.0845,0.0845],
+ '0.0990/56':[0.0865,0.0865], '0.1120/40':[0.0939,0.0939], '0.1120/48':[0.0968,0.0968],
+ '0.1250/40':[0.1062,0.1062], '0.1250/44':[0.1079,0.1079], '0.1380/32':[0.114 ,0.1140],
+ '0.1380/40':[0.119 ,0.1186], '0.1640/32':[0.139 ,0.1389], '0.1640/36':[0.142 ,0.1416],
+ '0.1900/24':[0.156 ,0.1555], '0.1900/32':[0.164 ,0.1641], '0.2160/24':[0.181 ,0.1807],
+ '0.2160/28':[0.186 ,0.1857], '0.2160/32':[0.190 ,0.1895], '0.2500/20':[0.207 ,0.2067],
+ '0.2500/28':[0.220 ,0.2190], '0.2500/32':[0.224 ,0.2229], '0.2500/36':[0.226 ,0.2258],
+ '0.3125/18':[0.265 ,0.2630], '0.3125/20':[0.270 ,0.2680], '0.3125/24':[0.277 ,0.2754],
+ '0.3125/28':[0.282 ,0.2807], '0.3125/32':[0.286 ,0.2847], '0.3125/36':[0.289 ,0.2877],
+ '0.3750/16':[0.321 ,0.3182], '0.3750/20':[0.332 ,0.3297], '0.3750/24':[0.340 ,0.3372],
+ '0.3750/28':[0.345 ,0.3426], '0.3750/32':[0.349 ,0.3469], '0.3750/36':[0.352 ,0.3501],
+ '0.4375/14':[0.376 ,0.3717], '0.4375/16':[0.384 ,0.3800], '0.4375/20':[0.395 ,0.3916],
+ '0.4375/28':[0.407 ,0.4051], '0.4375/32':[0.411 ,0.4094]
+};
+/* Class 3B maximum minor ø, in — FED-STD-H28/2B Table II.A.4, 1/2 … 3 1/4 in.
+   Transcribed from the scan and validated row-by-row against the standard's own
+   percent-of-thread columns (100 % = 0,75 H): 174 rows, 0 failures.
+   There is no closed form — same call as ISO 965-1, the table is the only safe source. */
+const UN_D1MAX_3B={
+ '0.5000/12':0.4223, '0.5000/13':0.4284, '0.5000/16':0.4419, '0.5000/20':0.4537,
+ '0.5000/28':0.4676, '0.5000/32':0.4719, '0.5625/12':0.4843, '0.5625/16':0.504,
+ '0.5625/18':0.5106, '0.5625/20':0.5162, '0.5625/24':0.5244, '0.5625/28':0.5301,
+ '0.5625/32':0.5344, '0.6250/11':0.5391, '0.6250/12':0.5463, '0.6250/16':0.5662,
+ '0.6250/18':0.573, '0.6250/20':0.5787, '0.6250/24':0.5869, '0.6250/28':0.5926,
+ '0.6250/32':0.5969, '0.6875/12':0.6085, '0.6875/16':0.6284, '0.6875/18':0.6355,
+ '0.6875/20':0.6412, '0.6875/24':0.6494, '0.6875/28':0.6551, '0.6875/32':0.6594,
+ '0.7500/10':0.6545, '0.7500/12':0.6707, '0.7500/16':0.6908, '0.7500/18':0.698,
+ '0.7500/20':0.7037, '0.7500/28':0.7176, '0.7500/32':0.7219, '0.8125/12':0.7329,
+ '0.8125/16':0.7533, '0.8125/18':0.7605, '0.8125/20':0.7662, '0.8125/28':0.7801,
+ '0.8125/32':0.7844, '0.8750/9':0.7681, '0.8750/12':0.7952, '0.8750/14':0.8068,
+ '0.8750/16':0.8158, '0.8750/18':0.823, '0.8750/20':0.8287, '0.8750/28':0.8426,
+ '0.8750/32':0.8469, '0.9375/12':0.8575, '0.9375/16':0.8783, '0.9375/20':0.8912,
+ '0.9375/28':0.9051, '0.9375/32':0.9094, '1.0000/8':0.8797, '1.0000/12':0.9198,
+ '1.0000/14':0.9315, '1.0000/16':0.9408, '1.0000/18':0.948, '1.0000/20':0.9537,
+ '1.0000/28':0.9676, '1.0000/32':0.9719, '1.0625/8':0.9422, '1.0625/12':0.9823,
+ '1.0625/14':0.994, '1.0625/16':1.0033, '1.0625/18':1.0105, '1.0625/20':1.0162,
+ '1.0625/28':1.0301, '1.1250/7':0.9875, '1.1250/8':1.0047, '1.1250/12':1.0448,
+ '1.1250/16':1.0658, '1.1250/18':1.073, '1.1250/20':1.0787, '1.1250/28':1.0926,
+ '1.1875/8':1.0672, '1.1875/12':1.1073, '1.1875/16':1.1283, '1.1875/18':1.1355,
+ '1.1875/20':1.1412, '1.1875/28':1.1551, '1.2500/7':1.1125, '1.2500/8':1.1297,
+ '1.2500/12':1.1698, '1.2500/16':1.1908, '1.2500/18':1.198, '1.2500/20':1.2037,
+ '1.2500/28':1.2176, '1.3125/8':1.1922, '1.3125/12':1.2323, '1.3125/16':1.2533,
+ '1.3125/18':1.2605, '1.3125/20':1.2662, '1.3125/28':1.2801, '1.3750/6':1.2146,
+ '1.3750/8':1.2547, '1.3750/12':1.2948, '1.3750/16':1.3158, '1.3750/18':1.323,
+ '1.3750/20':1.3287, '1.3750/28':1.3426, '1.4375/6':1.2771, '1.4375/8':1.3172,
+ '1.4375/12':1.3573, '1.4375/16':1.3783, '1.4375/18':1.3855, '1.4375/20':1.3912,
+ '1.4375/28':1.4051, '1.5000/6':1.3396, '1.5000/8':1.3797, '1.5000/12':1.4198,
+ '1.5000/16':1.4408, '1.5000/18':1.448, '1.5000/20':1.4537, '1.5000/28':1.4676,
+ '1.5625/6':1.4021, '1.5625/8':1.4422, '1.5625/12':1.4823, '1.5625/16':1.5033,
+ '1.5625/18':1.5105, '1.5625/20':1.5162, '1.6250/6':1.4646, '1.6250/8':1.5047,
+ '1.6250/12':1.5448, '1.6250/16':1.5658, '1.6250/18':1.573, '1.6250/20':1.5787,
+ '1.6875/6':1.5271, '1.6875/8':1.5672, '1.6875/12':1.6073, '1.6875/16':1.6283,
+ '1.6875/18':1.6355, '1.6875/20':1.6412, '1.7500/5':1.5575, '1.7500/6':1.5896,
+ '1.7500/8':1.6297, '1.7500/12':1.6698, '1.7500/16':1.6908, '1.7500/20':1.7037,
+ '1.8125/6':1.6521, '1.8125/8':1.6922, '1.8125/12':1.7323, '1.8125/16':1.7533,
+ '1.8125/20':1.7662, '1.8750/6':1.7146, '1.8750/8':1.7547, '1.8750/12':1.7948,
+ '1.8750/16':1.8158, '1.8750/20':1.8287, '1.9375/6':1.7771, '1.9375/8':1.8172,
+ '1.9375/12':1.8573, '1.9375/16':1.8783, '1.9375/20':1.8912, '2.0000/4.5':1.7861,
+ '2.0000/6':1.8396, '2.0000/8':1.8797, '2.0000/12':1.9198, '2.0000/16':1.9408,
+ '2.0000/20':1.9537, '2.0625/16':2.0033, '2.1250/6':1.9646, '2.1250/8':2.0047,
+ '2.1250/12':2.0448, '2.1250/16':2.0658, '2.1250/20':2.0787, '2.1875/16':2.1283,
+ '2.2500/4.5':2.0361, '2.2500/6':2.0896, '2.5000/4':2.2594, '2.7500/4':2.5094,
+ '3.0000/4':2.7594, '3.2500/4':3.0094
+};
+
+
+/* Maximum minor ø of an internal UN thread.  Returns null when no tabulated value applies,
+   in which case 0,25p − 0,4p² is used — which is exact for classes 1B/2B from ~No. 10 up
+   (verified against Table II.A.3 on 120 sizes, #10 … 3 1/4 in, every row inside the ±0,0005
+   print rounding) but is NOT valid for class 3B at any size.                              */
+function unD1Max(D,p,cls){
+  const key=D.toFixed(4)+'/'+(+(1/p).toFixed(1));
+  const pair=UN_D1MAX[key];
+  if(cls==='3B'){
+    if(pair) return pair[1];
+    const hi=UN_D1MAX_3B[key];
+    return hi!=null ? hi : null;
+  }
+  return pair ? pair[0] : null;      /* ≥ No. 10: formula is exact, no table needed */
+}
+
+/* ══════════ ASME B1.2-1983 — gages for Unified inch threads ══════════
+   §3.5: "W tolerance, shown in Table 7, represent the highest commercial grade of
+   accuracy … specified for thread-setting gages; X tolerances, shown in Table 6, are
+   larger than W … used for product inspection gages. Unless otherwise specified, all
+   thread gages and gaging contacts which directly check the product thread shall be X
+   tolerance."  Only Table 6 (X) is entered here; Table 7 (W) is not yet transcribed.
+
+   Table 6 — X gage tolerances, in.  Transcribed, structurally validated (28 rows,
+   monotonic in tpi, in diameter band and in half-angle, 0 violations) and then
+   CONFIRMED cell-for-cell against a zoomed re-read of p.18 — no corrections.
+   [tpi, lead, half-angle (min), majMin ≤4in, majMin >4in, PD ≤1½, >1½–4, >4–8, >8–12] */
+const B12_X=[
+ [80,.0002,30,.0003,null,.0002,null,null,null], [72,.0002,30,.0003,null,.0002,null,null,null],
+ [64,.0002,30,.0004,null,.0002,null,null,null], [56,.0002,30,.0004,null,.0002,.0003,null,null],
+ [48,.0002,30,.0004,null,.0002,.0003,null,null],[44,.0002,20,.0004,null,.0002,.0003,null,null],
+ [40,.0002,20,.0004,null,.0002,.0003,null,null],[36,.0002,20,.0004,null,.0002,.0003,null,null],
+ [32,.0003,15,.0005,.0007,.0003,.0004,.0005,.0006],[28,.0003,15,.0005,.0007,.0003,.0004,.0005,.0006],
+ [27,.0003,15,.0005,.0007,.0003,.0004,.0005,.0006],[24,.0003,15,.0005,.0007,.0003,.0004,.0005,.0006],
+ [20,.0003,15,.0005,.0007,.0003,.0004,.0005,.0006],[18,.0003,10,.0005,.0007,.0003,.0004,.0005,.0006],
+ [16,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],[14,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],
+ [13,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],[12,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],
+ [11.5,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],[11,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],
+ [10,.0003,10,.0006,.0009,.0003,.0004,.0006,.0008],[9,.0003,10,.0007,.0011,.0003,.0004,.0006,.0008],
+ [8,.0004,5,.0007,.0011,.0004,.0005,.0006,.0008],[7,.0004,5,.0007,.0011,.0004,.0005,.0006,.0008],
+ [6,.0004,5,.0008,.0013,.0004,.0005,.0006,.0008],[5,.0004,5,.0008,.0013,null,.0005,.0006,.0008],
+ [4.5,.0004,5,.0008,.0013,null,.0005,.0006,.0008],[4,.0004,5,.0009,.0015,null,.0005,.0006,.0008]
+];
+/* ASME B1.2-1983 Table 7 — W gage tolerances, in.  Per §3.5 these are "the highest
+   commercial grade of accuracy and workmanship and are specified for thread-setting gages";
+   §5.1.1 adds that adjustable GO thread ring gages must be set to W tolerance setting plugs.
+   Transcribed from the rotated p.25 scan, where leading zeros are clipped (.0015 printed for
+   .00015).  Reconstructed and then policed against the confirmed Table 6: 256 cells compared,
+   ZERO cases of W > X, which §3.5 forbids.  The surviving pattern is itself the check —
+   W is tighter than X on lead, half-angle and pitch ø, and EQUAL to X on major/minor ø
+   throughout (64 cells); a mis-read digit would break that structure.
+   [tpi, lead ≤½, lead >½, half-angle (min), majMin ≤½, ½–4, >4, PD ≤½, ½–1½, 1½–4, 4–8, 8–12] */
+const B12_W=[
+ [80,.0001,.00015,20,.0003,.0003,null,.0001,.00015,null,null,null],
+ [72,.0001,.00015,20,.0003,.0003,null,.0001,.00015,null,null,null],
+ [64,.0001,.00015,20,.0003,.0004,null,.0001,.00015,null,null,null],
+ [56,.0001,.00015,20,.0003,.0004,null,.0001,.00015,null,null,null],
+ [48,.0001,.00015,18,.0003,.0004,null,.0001,.00015,.0002,null,null],
+ [44,.0001,.00015,15,.0003,.0004,null,.0001,.00015,.0002,null,null],
+ [40,.0001,.00015,15,.0003,.0004,null,.0001,.00015,.0002,null,null],
+ [36,.0001,.00015,12,.0003,.0004,null,.0001,.00015,.0002,null,null],
+ [32,.0001,.00015,12,.0003,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [28,.00015,.00015,8,.0005,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [27,.00015,.00015,8,.0005,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [24,.00015,.00015,8,.0005,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [20,.00015,.00015,8,.0005,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [18,.00015,.00015,8,.0005,.0005,.0007,.0001,.00015,.0002,.00025,.0003],
+ [16,.00015,.00015,8,.0006,.0006,.0009,.0001,.0002,.00025,.0003,.0004],
+ [14,.0002,.0002,6,.0006,.0006,.0009,.00015,.0002,.00025,.0003,.0004],
+ [13,.0002,.0002,6,.0006,.0006,.0009,.00015,.0002,.00025,.0003,.0004],
+ [12,.0002,.0002,6,.0006,.0006,.0009,.00015,.0002,.00025,.0003,.0004],
+ [11.5,.0002,.0002,6,.0006,.0006,.0009,.00015,.0002,.00025,.0003,.0004],
+ [11,.0002,.0002,6,.0006,.0006,.0009,.00015,.0002,.00025,.0003,.0004],
+ [10,.0002,.00025,6,null,.0006,.0009,null,.0002,.00025,.0003,.0004],
+ [9,.0002,.00025,6,null,.0007,.0011,null,.0002,.00025,.0003,.0004],
+ [8,.0002,.00025,5,null,.0007,.0011,null,.0002,.00025,.0003,.0004],
+ [7,.0002,.0003,5,null,.0007,.0011,null,.0002,.00025,.0003,.0004],
+ [6,null,.0003,5,null,.0008,.0013,null,null,.00025,.0003,.0004],
+ [5,null,.0003,4,null,.0008,.0013,null,null,.00025,.0003,.0004],
+ [4.5,null,.0003,4,null,.0008,.0013,null,null,.00025,.0003,.0004],
+ [4,null,.0003,4,null,.0009,.0015,null,null,.00025,.0003,.0004]
+];
+function b12W(tpi,D){
+  let r=null,best=Infinity;
+  for(const row of B12_W){ const d=Math.abs(row[0]-tpi); if(d<best){best=d; r=row;} }
+  if(!r||best>0.26) return null;
+  const pdi = D<=0.5?7 : D<=1.5?8 : D<=4?9 : D<=8?10 : 11;
+  let pd=r[pdi]; for(let i=pdi;i>=7&&pd==null;i--) pd=r[i];
+  const mmi = D<=0.5?4 : D<=4?5 : 6;
+  let mm=r[mmi]; for(let i=mmi;i>=4&&mm==null;i--) mm=r[i];
+  if(pd==null) return null;
+  return {pd, majMin:mm, lead:(D<=0.5?(r[1]??r[2]):r[2]), halfAngleMin:r[3]};
+}
+
+/* ASME B1.2-1983 Table 8 — gage tolerances for PLAIN CYLINDRICAL gages, in.
+   [above ø, to and including ø, XX, X, Y, Z, ZZ].  Note 1: tolerances apply to the actual
+   diameter of the plug or ring, applied per Table 4.  Note 2: class Z is the one used on
+   plain plug/ring gages checking the MINOR ø of internal threads and the OUTSIDE ø of
+   external threads — hence the default here.                                            */
+const B12_PLAIN=[
+ [0.020,0.825,0.00002 ,0.00004,0.00007,0.00010,0.00020],
+ [0.825,1.510,0.00003 ,0.00006,0.00009,0.00012,0.00024],
+ [1.510,2.510,0.00004 ,0.00008,0.00012,0.00016,0.00032],
+ [2.510,4.510,0.00005 ,0.00010,0.00015,0.00020,0.00040],
+ [4.510,6.510,0.000065,0.00013,0.00019,0.00025,0.00050],
+ [6.510,9.010,0.00008 ,0.00016,0.00024,0.00032,0.00064],
+ [9.010,12.010,0.00010,0.00020,0.00030,0.00040,0.00080]
+];
+const B12_PLAIN_COL={XX:2,X:3,Y:4,Z:5,ZZ:6};
+function b12Plain(D,cls){
+  const c=B12_PLAIN_COL[cls||'Z'];
+  for(const r of B12_PLAIN) if(D>r[0] && D<=r[1]) return r[c];
+  return null;
+}
+
+/* Table 6 note 2: above 12 in. the PD tolerance scales from col. 9 in the ratio D/12. */
+function b12X(tpi,D){
+  let r=null, best=Infinity;
+  for(const row of B12_X){ const d=Math.abs(row[0]-tpi); if(d<best){best=d; r=row;} }
+  if(!r || best>0.26) return null;                 /* not a tabulated pitch */
+  const pdBand = D<=1.5?5 : D<=4?6 : D<=8?7 : 8;
+  let pd=r[pdBand];
+  for(let i=pdBand;i>=5&&pd==null;i--) pd=r[i];    /* fall back to the widest band given */
+  if(pd==null) return null;
+  if(D>12 && r[8]!=null) pd = r[8]*D/12;           /* note 2 */
+  return {pd, majMin:(D<=4?r[3]:(r[4]??r[3])), lead:r[1], halfAngleMin:r[2], tpi:r[0]};
+}
+const FRACTIONS=(()=>{const a=[];for(let i=1;i<=64;i++)a.push([i+'/64',i/64]);return a;})();
+const NUMBER_DRILLS=[[1,.2280],[2,.2210],[3,.2130],[4,.2090],[5,.2055],[6,.2040],[7,.2010],[8,.1990],
+ [9,.1960],[10,.1935],[11,.1910],[12,.1890],[13,.1850],[14,.1820],[15,.1800],[16,.1770],[17,.1730],
+ [18,.1695],[19,.1660],[20,.1610],[21,.1590],[22,.1570],[23,.1540],[24,.1520],[25,.1495],[26,.1470],
+ [27,.1440],[28,.1405],[29,.1360],[30,.1285],[31,.1200],[32,.1160],[33,.1130],[34,.1110],[35,.1100],
+ [36,.1065],[37,.1040],[38,.1015],[39,.0995],[40,.0980],[41,.0960],[42,.0935],[43,.0890],[44,.0860],
+ [45,.0820],[46,.0810],[47,.0785],[48,.0760],[49,.0730],[50,.0700],[51,.0670],[52,.0635],[53,.0595],
+ [54,.0550],[55,.0520],[56,.0465],[57,.0430],[58,.0420],[59,.0410],[60,.0400]];
+const LETTER_DRILLS=[['A',.234],['B',.238],['C',.242],['D',.246],['E',.250],['F',.257],['G',.261],
+ ['H',.266],['I',.272],['J',.277],['K',.281],['L',.290],['M',.295],['N',.302],['O',.316],['P',.323],
+ ['Q',.332],['R',.339],['S',.348],['T',.358],['U',.368],['V',.377],['W',.386],['X',.397],['Y',.404],['Z',.413]];
+
+function metricDrills(){
+  const a=[];
+  for(let v=0.5; v<=3.0001; v+=0.05) a.push([v.toFixed(2)+' mm', +v.toFixed(2)]);
+  for(let v=3.1; v<=14.0001; v+=0.1)  a.push([v.toFixed(1)+' mm', +v.toFixed(1)]);
+  for(let v=14.25; v<=32.0001; v+=0.25) a.push([v.toFixed(2)+' mm', +v.toFixed(2)]);
+  return a;
+}
+function inchDrills(){
+  const a=[];
+  NUMBER_DRILLS.forEach(d=>a.push(['#'+d[0], d[1]]));
+  LETTER_DRILLS.forEach(d=>a.push([d[0], d[1]]));
+  FRACTIONS.forEach(d=>a.push([d[0]+'"', d[1]]));
+  return a.sort((x,y)=>x[1]-y[1]);
+}
+/* Nearest drill at or below target, plus nearest overall.
+   The tabulated sets are finite — metric runs 0,5…32 mm, the inch set stops at 1" — so a target
+   outside that range has NO nearest drill.  Returning the end of the list would be a lie: an
+   M70×2 wants a 68,05 mm hole and would silently snap to 32 mm at 1462 % of thread.  Above the
+   table you bore or trepan rather than drill, so say that instead of inventing a size.        */
+function pickDrill(target,set){
+  const list=(set==='metric')?metricDrills():inchDrills();
+  let lo=Infinity, hi=-Infinity;
+  list.forEach(d=>{ if(d[1]<lo) lo=d[1]; if(d[1]>hi) hi=d[1]; });
+  if(!(target>=lo-1e-9 && target<=hi+1e-9))
+    return {nearest:null, under:null, outOfRange:true, rangeLo:lo, rangeHi:hi,
+            above: target>hi};
+  let best=null,bd=1e9, under=null;
+  list.forEach(d=>{
+    const diff=Math.abs(d[1]-target);
+    if(diff<bd){bd=diff;best=d;}
+    if(d[1]<=target+1e-9 && (!under || d[1]>under[1])) under=d;
+  });
+  return {nearest:best, under:under, outOfRange:false, rangeLo:lo, rangeHi:hi};
+}
+
+/* ─────────────── helpers ─────────────── */
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value);
+let SYS='iso';
+function rangeIdx(d){
+  for(let i=0;i<DRANGES.length;i++) if(d>DRANGES[i][0]&&d<=DRANGES[i][1]) return i;
+  return -1;
+}
+function look(t,p,g,gs){const r=t[p];if(!r)return undefined;const i=gs.indexOf(g);return i<0?undefined:r[i];}
+function look2(t,ri,p,g,gs){if(ri<0||!t[ri])return undefined;const r=t[ri][p];if(!r)return undefined;
+  const i=gs.indexOf(g);return i<0?undefined:r[i];}
+function fmtP(v){ return (Math.round(v*100000)/100000).toString(); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CORE CALCULATION
+   ══════════════════════════════════════════════════════════════════════════════ */
+function compute(){
+  const ext=$('ttype').value==='ext';
+  const starts=Math.max(1,Math.round(num('starts')||1));
+  const flags=[];
+  const D=num('dnom'); let P;
+  if(SYS==='iso'){ P=num('pitch'); }
+  else { const tpi=num('pitch'); P = tpi>0 ? 1/tpi : NaN; }
+  if(!(D>0)||!(P>0)) return {err:'Enter a positive diameter and pitch.'};
+
+  /* basic profile (identical 60° geometry for M and UN) */
+  const H  = P*Math.sqrt(3)/2;
+  const d2b= D - 0.649519052838329*P;
+  const d1b= D - 1.082531754730548*P;
+  const d3b= D - 1.226869322418674*P;   /* H/6 truncation, ISO 965-3 basis */
+
+  let dev=null, devC=null, Tpd=null, Tcd=null, TpdSrc='', TcdSrc='', clsStr='', lim={};
+  let ri=-1, pdG=null,pdP=null,cdG=null,cdP=null, unCls=null;
+
+  if(SYS==='iso'){
+    ri=rangeIdx(D);
+    pdG=parseInt($('pdGrade').value); pdP=$('pdPos').value;
+    cdG=parseInt($('cdGrade').value); cdP=$('cdPos').value;
+    if(ri<0) flags.push({t:'warn',m:'Basic major ø '+D+' mm is outside the 0,99–355 mm range of ISO 965-1 Tables 2/5/6.'});
+    if(FD[P]===undefined) flags.push({t:'warn',m:'Pitch '+P+' mm is not a tabulated ISO pitch.'});
+    dev  = (pdP==='h'||pdP==='H') ? 0 : (FD[P]?FD[P][pdP]:undefined);
+    devC = (cdP==='h'||cdP==='H') ? 0 : (FD[P]?FD[P][cdP]:undefined);
+    if(dev==null)  flags.push({t:'err',m:'Position '+pdP+' is not defined for pitch '+P+' mm (ISO 965-1 Table 1).'});
+    if(devC==null) flags.push({t:'err',m:'Crest position '+cdP+' is not defined for pitch '+P+' mm.'});
+    if(ext){ Tpd=look2(TD2E,ri,P,pdG,TD2E_GRADES); TpdSrc='ISO 965-1 Table 6 (Td2)';
+             Tcd=look(TDMAJ,P,cdG,TDMAJ_GRADES);   TcdSrc='ISO 965-1 Table 4 (Td)'; }
+    else   { Tpd=look2(TD2,ri,P,pdG,TD2_GRADES);   TpdSrc='ISO 965-1 Table 5 (TD2)';
+             Tcd=look(TD1,P,cdG,TD1_GRADES);       TcdSrc='ISO 965-1 Table 3 (TD1)'; }
+    if(Tpd==null) flags.push({t:'err',m:'Pitch-ø grade '+pdG+' is not tabulated for D = '+D+' mm / P = '+P+
+      ' mm. ISO 965-1 omits grades whose calculated value would exceed the permitted crest tolerance.'});
+    if(Tcd==null) flags.push({t:'err',m:'Crest-ø grade '+cdG+' is not tabulated for P = '+P+' mm.'});
+    clsStr = (''+pdG+pdP)===(''+cdG+cdP) ? (''+pdG+pdP) : (''+pdG+pdP+cdG+cdP);
+    if(Tpd!=null&&Tcd!=null&&dev!=null&&devC!=null){
+      const e=dev/1000, eC=devC/1000, tp=Tpd/1000, tc=Tcd/1000;
+      if(ext){ lim.majMax=D+eC; lim.majMin=lim.majMax-tc;
+               lim.pdMax=d2b+e; lim.pdMin=lim.pdMax-tp;
+               lim.minVal=d3b+e; }                       /* ISO 965-3 single value */
+      else   { lim.minMin=d1b+eC; lim.minMax=lim.minMin+tc;
+               lim.pdMin=d2b+e;  lim.pdMax=lim.pdMin+tp;
+               lim.majMin=D+e; lim.majMax=null; }
+    }
+  } else {
+    unCls=$('unClass').value;
+    const isExtCls = /A$/.test(unCls);
+    if(isExtCls!==ext){ flags.push({t:'err',m:'Class '+unCls+' is an '+(isExtCls?'external':'internal')+
+      ' class but the thread type is set to '+(ext?'external':'internal')+'.'}); }
+    const LE = ($('engMode').value==='man') ? num('engMan') : D;   /* B1.1 tables use LE = D */
+    const T2A = unTd2_2A(D,P,LE);
+    Tpd = UN_PD_F[unCls]*T2A;
+    TpdSrc='ASME B1.1 §5 formula, class factor '+UN_PD_F[unCls];
+    const allow = ext ? (UN_ALLOW_F[unCls]||0)*T2A : 0;
+    dev = ext ? -allow*1000 : 0;   /* µ-units for display consistency (inch → µin later) */
+    if(ext){
+      Tcd = unTdMaj(P,unCls); TcdSrc='ASME B1.1 §5: '+(unCls==='1A'?'0,090':'0,060')+'·∛(p²)';
+      lim.majMax = D - allow;  lim.majMin = lim.majMax - Tcd;
+      lim.pdMax  = d2b - allow; lim.pdMin = lim.pdMax - Tpd;
+      lim.minVal = d3b - allow;
+    } else {
+      lim.minMin = d1b;
+      const d1Tab = unD1Max(D,P,unCls);
+      if(d1Tab!=null){
+        lim.minMax = d1Tab; Tcd = d1Tab - d1b;
+        TcdSrc = 'FED-STD-H28/2B Table '+(unCls==='3B'?'II.A.4 (class 3B)':'II.A.3 (classes 1B, 2B)');
+      } else {
+        Tcd = unTD1(P); TcdSrc='ASME B1.1 §5: 0,25p − 0,4p² (no tabulated value for this size)';
+        lim.minMax = d1b + Tcd;
+        if(unCls==='3B') flags.push({t:'warn',m:'No tabulated class 3B minor ø for this size — '+
+          'FED-STD-H28/2B Table II.A.4 covers #0-80 to 3 1/4-4. The maximum shown falls back to '+
+          '0,25p − 0,4p², which is the <b>classes 1B/2B</b> rule and reads oversize for 3B by up to '+
+          '0,0105 in (0,27 mm) across the tabulated range. Treat it as an upper bound only.'});
+        else if(D < 0.19) flags.push({t:'warn',m:'0,25p − 0,4p² under-reads the tabulated maximum minor ø '+
+          'by 0,0013–0,0030 in for screw sizes below No. 10 (FED-STD-H28/2B Table II.A.3). '+
+          'The maximum shown is conservative.'});
+      }
+      lim.pdMin  = d2b; lim.pdMax  = d2b + Tpd;
+      lim.majMin = D;   lim.majMax = null;
+    }
+    clsStr = unCls;
+    devC = dev;
+  }
+
+  const ok = (lim.pdMax!=null && lim.pdMin!=null);
+
+  /* engagement group (ISO only) */
+  let eng={group:'—',lo:null,hi:null,len:null};
+  if(SYS==='iso'){
+    const er=(ri>=0&&ENG[ri])?ENG[ri][P]:undefined;
+    if(er){ eng.lo=er[0]; eng.hi=er[1];
+      if($('engMode').value==='man'){ const L=num('engMan'); eng.len=L;
+        eng.group = L<=er[0]?'S':(L<=er[1]?'N':'L'); }
+      else eng.group='N';
+    } else if($('engMode').value==='man'){ eng.len=num('engMan'); }
+  } else {
+    eng.len = ($('engMode').value==='man')?num('engMan'):D;
+  }
+
+  /* inspection geometry */
+  const lead=starts*P;
+  const d2use= ok ? (lim.pdMax+lim.pdMin)/2 : d2b;
+  const leadAngle=Math.atan2(lead, Math.PI*d2use)*180/Math.PI;
+  const wBest=P/(2*Math.cos(Math.PI/6));
+  const wire = ($('wireMode').value==='man') ? num('wireMan')/uf() : wBest;
+  const useCorr = $('leadCorr').value==='on';
+  /* M = d2 + W(1 + cosec α) − (p/2)cot α  [+ W·0.5·tan²λ·cos α·cot α]
+     α = 30° half-angle → 1+cosec = 3, (p/2)cot = 0,866025·p, corr coeff = 0,75 */
+  function overWire(d2v){
+    const lam=Math.atan2(lead, Math.PI*d2v);
+    const base = d2v + 3*wire - H;
+    return base + (useCorr ? 0.75*wire*Math.tan(lam)*Math.tan(lam) : 0);
+  }
+  function betwWire(d2v){
+    const lam=Math.atan2(lead, Math.PI*d2v);
+    const base = d2v - 3*wire + H;
+    return base - (useCorr ? 0.75*wire*Math.tan(lam)*Math.tan(lam) : 0);
+  }
+  const Rmin=0.125*P, Rpref=P*Math.sqrt(3)/12;
+
+  /* root truncation, ISO 965-1 clause 11 (external threads) */
+  let Cmax=null,Cmin=null;
+  if(ext && Tpd!=null){
+    const Td2mm = (SYS==='iso') ? Tpd/1000 : Tpd;
+    const inner = 1 - Td2mm/(4*Rmin);
+    if(inner>=-1 && inner<=1){
+      Cmax = H/4 - Rmin*(1-Math.cos(Math.PI/3 - Math.acos(inner))) + Td2mm/2;
+    }
+    Cmin = 0.125*P;
+  }
+
+  /* ── tapping drill (internal threads) ── */
+  let tap=null;
+  if(!ext && ok){
+    const pct=num('pctThread');
+    const K=1.299038105676658;              /* 2 × 0,75H / P  → 0,75H = 0,649519P radial */
+    const hole = D - (pct/100)*K*P;
+    const pctOf = h => 100*(D-h)/(K*P);
+    const set=$('drillSet').value;
+    const pick=pickDrill(hole*uf(), set);           /* drill lists are in display units */
+    tap={pct:pct, hole:hole, K:K,
+         pctAtD1min:pctOf(lim.minMin), pctAtD1max:pctOf(lim.minMax),
+         holeForD1min:lim.minMin, holeForD1max:lim.minMax,
+         nearest:pick.nearest, under:pick.under,
+         outOfRange:pick.outOfRange, rangeLo:pick.rangeLo, rangeHi:pick.rangeHi, above:pick.above,
+         drillSet:set,
+         nearestPct: pick.nearest?pctOf(pick.nearest[1]/uf()):null,
+         underPct:   pick.under  ?pctOf(pick.under[1]/uf()):null};
+    if(pct>100) flags.push({t:'warn',m:'A target above 100 % of thread means a hole smaller than the '+
+      'theoretical sharp-V minor ø — the tap will not clear.'});
+  }
+
+  /* ── gauges — ISO 1502:1996 for metric threads; Taylor targets only for UN ── */
+  let gauge=null;
+  if(ok){
+    const u=1000;                                   /* µm per mm (ISO 1502 is metric only) */
+    gauge={kind: ext?'ring':'plug', iso:false,
+           goPd: ext?lim.pdMax:lim.pdMin,           /* maximum-material limit  */
+           ngPd: ext?lim.pdMin:lim.pdMax,           /* least-material limit    */
+           goPlain: ext?lim.majMax:lim.minMin,
+           ngPlain: ext?lim.majMin:lim.minMax};
+
+    /* ── ASME B1.2-1983 Table 4 — limits of size of Unified inch thread gages ──
+       Table 4 puts the gage BASIC size exactly ON the product limit and applies the
+       gagemaker's tolerance UNILATERALLY, INTO the product band:
+         row 3  GO ring PD      = max PD of external thread; gage tolerance MINUS
+         row 5  NOT GO (LO) ring= min PD of external thread; gage tolerance PLUS
+         row 10 GO plug PD      = min PD of internal thread; gage tolerance PLUS
+         row 12 NOT GO (HI) plug= max PD of internal thread; gage tolerance MINUS
+       So BOTH zones lie wholly INSIDE the product tolerance — the opposite of
+       ISO 1502, where the NOT GO zone sits outside it.  Confirmed against the
+       standard's own identification examples for 1/4-20, all four exact:
+         §4.1.12 2B GO plug PD .2175 · §4.2.11 2B NOT GO plug PD .2224
+         §5.1.12 2A GO ring PD .2164 · §5.2.11 2A NOT GO ring PD .2127          */
+    if(SYS==='un' && Tpd!=null){
+      const xt=b12X(1/P,D);
+      if(xt){
+        gauge.b12=true; gauge.xPd=xt.pd; gauge.xMajMin=xt.majMin;
+        gauge.xLead=xt.lead; gauge.xHalfAngle=xt.halfAngleMin;
+        gauge.w=b12W(1/P,D);        /* Table 7 — thread-SETTING gauges only (§3.5, §5.1.1) */
+        if(ext){ gauge.goHi=lim.pdMax;        gauge.goLo=lim.pdMax-xt.pd;
+                 gauge.ngHi=lim.pdMin+xt.pd;  gauge.ngLo=lim.pdMin; }
+        else   { gauge.goHi=lim.pdMin+xt.pd;  gauge.goLo=lim.pdMin;
+                 gauge.ngHi=lim.pdMax;        gauge.ngLo=lim.pdMax-xt.pd; }
+        gauge.goCentre=(gauge.goHi+gauge.goLo)/2;
+        gauge.ngCentre=(gauge.ngHi+gauge.ngLo)/2;
+        /* plain gauges — Table 4 rows 7/8 (major ø of external) and 13/14 (minor ø of
+           internal), tolerance from Table 8 class Z per its note 2.                    */
+        const pz=b12Plain(D,'Z');
+        if(pz!=null && gauge.goPlain!=null && gauge.ngPlain!=null){
+          gauge.plainCls='Z'; gauge.plainTolB12=pz;
+          if(ext){ gauge.plainGoHi=gauge.goPlain;    gauge.plainGoLo=gauge.goPlain-pz;   /* row 7 */
+                   gauge.plainNgHi=gauge.ngPlain+pz; gauge.plainNgLo=gauge.ngPlain; }    /* row 8 */
+          else   { gauge.plainGoHi=gauge.goPlain+pz; gauge.plainGoLo=gauge.goPlain;      /* row 13 */
+                   gauge.plainNgHi=gauge.ngPlain;    gauge.plainNgLo=gauge.ngPlain-pz; } /* row 14 */
+        }
+      } else {
+        flags.push({t:'warn',m:'ASME B1.2 Table 6 has no X gage tolerance for '+
+          (1/P).toFixed(1)+' threads/in. Gauge target sizes below are still exact; only the '+
+          'gauge-making tolerance is missing.'});
+      }
+    }
+
+    if(SYS==='iso' && Tpd!=null){
+      const t4=gLookup(G_T4,Tpd), t5=gLookup(G_T5,Tpd);
+      if(t4){
+        gauge.iso=true;
+        gauge.TR=t4[1]; gauge.TPL=t4[2]; gauge.TCP=t4[3]; gauge.mVal=t4[4];
+        gauge.ZR=t4[5]; gauge.ZPL=t4[6];
+        const T = (ext ? t4[1] : t4[2])/u;          /* T_R for rings, T_PL for plugs */
+        const Z = (ext ? t4[5] : t4[6])/u;          /* Z_R  for rings, Z_PL for plugs */
+        gauge.T=T; gauge.Z=Z;
+        /* GO tolerance zone. Symbol table of ISO 1502 defines Z_PL as the distance from
+           the middle of T_PL to the LOWER limit of the workpiece thread, and Z_R as the
+           distance from the middle of T_R to the UPPER limit. Table 4 note 1 fixes the
+           sign: the formula subtracts Z_R, so a negative Z_R places the zone outside Td2. */
+        gauge.goCentre = ext ? (lim.pdMax - Z) : (lim.pdMin + Z);
+        gauge.goHi = gauge.goCentre + T/2;
+        gauge.goLo = gauge.goCentre - T/2;
+        /* NOT GO zone — ISO 1502 clause 13, Table 12 (internal) / Table 10 (external).
+           Table 12, NOT GO screw plug gauge, pitch ø theoretical size = D2 + EI + T_D2 + T_PL/2,
+           tolerance ±T_PL/2.  D2 + EI + T_D2 IS D2max, so the zone runs D2max … D2max + T_PL —
+           it sits wholly OUTSIDE the workpiece band, extending away from it on the
+           least-material side.  (Earlier releases assumed it extended inward: wrong by the
+           full gauge tolerance.)  Table 10 gives the mirror for rings: rows 12 and 16 both
+           put the solid NOT GO ring centre at d2 − |es| − T_d2 − T_R/2 = d2min − T_R/2,
+           i.e. the zone runs d2min − T_R … d2min. */
+        gauge.ngCentre = ext ? (lim.pdMin - T/2) : (lim.pdMax + T/2);
+        gauge.ngHi = gauge.ngCentre + T/2;
+        gauge.ngLo = gauge.ngCentre - T/2;
+        /* wear limits — Table 12 notes 1 & 2 (plugs) and Table 10 rows 6/16 (rings).
+           A plug wears smaller, a ring wears larger, so both move off centre the same way. */
+
+        /* ── gauge crest / clearing diameters, ISO 1502 Table 12 (screw PLUG gauges) ──
+           GO plug   major ø = D + EI + Z_PL              ±T_PL
+           NOT GO    major ø = D2 + EI + T_D2 + T_PL/2 + 2F1  ±T_PL   (= ngCentre + 2F1)
+           both      minor ø max = D1 + EI − H/6, with clearance groove b2 (GO) / b3 (NOT GO)
+           F1 is defined on figures 7 and 8 — "F1 = 0,1P" — identical for the external and
+           internal truncated profiles.  That was the last unsourced symbol in this section.
+           Figure crest/root limits, same source: complete flanks b2max = P/4, r2max = 0,144P
+           = H/6 (fig 5, external) and b1max = P/8, r1max = 0,072P = H/12 (fig 6, internal);
+           truncated flanks b3 = P/2 − 2·F2·tan30° (F2 from table 3, not held here).        */
+        if(!ext){
+          const F1 = 0.1*P;
+          gauge.F1 = F1;
+          gauge.goMaj = lim.majMin + Z;              /* D + EI + Z_PL   */
+          gauge.ngMaj = gauge.ngCentre + 2*F1;       /* + 2F1 per T12   */
+          gauge.majTol = T;                          /* ±T_PL           */
+          if(lim.minMin!=null) gauge.clearMax = lim.minMin - H/6;
+          gauge.b1max = P/8; gauge.r1max = P*0.072;
+        }
+      }
+      if(t5){
+        gauge.wGO = ext?t5[1]:t5[2]; gauge.wNG = ext?t5[3]:t5[4];
+        /* ISO 1502 Table 12 notes 1 & 2 (plugs): GO wear limit = D2 + EI + Z_PL − W_GO,
+           NOT GO wear limit = D2 + EI + T_D2 + T_PL/2 − W_NG.  Table 10 rows 6 and 16 give
+           the ring mirror (+W_GO / +W_NG): a plug wears smaller, a ring wears larger.      */
+        if(gauge.goCentre!=null){
+          gauge.goWear = gauge.goCentre + (ext ? gauge.wGO/u : -gauge.wGO/u);
+          gauge.ngWear = gauge.ngCentre + (ext ? gauge.wNG/u : -gauge.wNG/u);
+        }
+      }
+
+      /* flank-angle and pitch tolerances for the gauge thread */
+      gauge.flank = G_T6[P] || null;
+      gauge.pitchTol = G_T7;
+
+      /* plain gauges — Table 8 (external major ø) / Table 9 (internal minor ø) */
+      if(ext && Tcd!=null){
+        const t8=gLookup(G_T8,Tcd);
+        if(t8){ gauge.plainTol=t8[1]; gauge.plainCheck=t8[2]; gauge.plainZ=t8[3];
+                gauge.plainCentre = lim.majMax - t8[3]/u;
+                gauge.plainHi = gauge.plainCentre + t8[1]/u;
+                gauge.plainLo = gauge.plainCentre - t8[1]/u; }
+      } else if(!ext && Tcd!=null){
+        const t9=gLookup(G_T9,Tcd);
+        if(t9){ gauge.plainTol=t9[1]; gauge.plainZ=t9[2];
+                gauge.plainCentre = lim.minMin + t9[2]/u;
+                gauge.plainHi = gauge.plainCentre + t9[1]/u;
+                gauge.plainLo = gauge.plainCentre - t9[1]/u; }
+      }
+    }
+    /* manual overrides still honoured */
+    const gt=parseFloat($('gTol').value), gw=parseFloat($('gWear').value);
+    if(isFinite(gt)) gauge.tolManual=gt/((SYS==='iso')?1000:1e6);
+    if(isFinite(gw)) gauge.wearManual=gw/((SYS==='iso')?1000:1e6);
+  }
+
+  /* ── pre-plating ── */
+  let plat=null;
+  const pm=$('platMode').value;
+  if(pm!=='off' && ok){
+    const u=(SYS==='iso')?1000:1e6;
+    const tmin=num('tmin')/u, tmax=num('tmax')/u;
+    if(!(tmax>=tmin)||!(tmin>=0)) flags.push({t:'err',m:'Coating range invalid — max must be ≥ min ≥ 0.'});
+    else{
+      const s4=4*(tmax-tmin), s2=2*(tmax-tmin);
+      const Tpdw=(SYS==='iso')?Tpd/1000:Tpd, Tcdw=(SYS==='iso')?Tcd/1000:Tcd;
+      plat={tmin,tmax,mode:pm,shrink4:s4,shrink2:s2,u};
+      const cMax = ext?lim.majMax:lim.minMax, cMin = ext?lim.majMin:lim.minMin;
+      if(pm==='after'){
+        if(ext){ plat.pdMax=lim.pdMax-4*tmax; plat.pdMin=lim.pdMin-4*tmin;
+                 plat.cdMax=cMax-2*tmax;      plat.cdMin=cMin-2*tmin; }
+        else   { plat.pdMin=lim.pdMin+4*tmax; plat.pdMax=lim.pdMax+4*tmin;
+                 plat.cdMin=cMin+2*tmax;      plat.cdMax=cMax+2*tmin; }
+        if(s4>Tpdw) flags.push({t:'err',m:'Coating spread consumes 4×spread = '+((s4)*u).toFixed(0)+
+          ' which exceeds the whole pitch-ø tolerance of '+(Tpdw*u).toFixed(0)+'. No pre-plate band exists.'});
+        else if(s4>0.6*Tpdw) flags.push({t:'warn',m:'Coating spread consumes '+(100*s4/Tpdw).toFixed(0)+
+          '% of the pitch-ø tolerance, leaving '+((Tpdw-s4)*u).toFixed(0)+' for manufacture.'});
+        if(Tcdw!=null && s2>Tcdw) flags.push({t:'err',m:'2×coating spread exceeds the crest-ø tolerance.'});
+      } else {
+        if(ext){ plat.pdMax=lim.pdMax+4*tmax; plat.pdMin=lim.pdMin+4*tmin;
+                 plat.cdMax=cMax+2*tmax;      plat.cdMin=cMin+2*tmin;
+                 plat.transgress=plat.pdMax>d2b+1e-9; plat.tAllow=(dev==null?0:-dev/4); }
+        else   { plat.pdMin=lim.pdMin-4*tmax; plat.pdMax=lim.pdMax-4*tmin;
+                 plat.cdMin=cMin-2*tmax;      plat.cdMax=cMax-2*tmin;
+                 plat.transgress=plat.pdMin<d2b-1e-9; plat.tAllow=(dev==null?0:dev/4); }
+        const unit=(SYS==='iso')?'µm':'µin';
+        if(plat.transgress) flags.push({t:'err',m:'After coating the pitch ø transgresses the maximum-material '+
+          'limit of position '+(ext?'h':'H')+', which ISO 965-1 clause 12 forbids. Max permissible coating for this '+
+          'position is '+Math.abs(plat.tAllow).toFixed(1)+' '+unit+' (= |fundamental deviation| ÷ 4).'});
+        else flags.push({t:'ok',m:'After coating the thread stays inside the position '+(ext?'h':'H')+
+          ' maximum-material limit. Headroom '+Math.abs(plat.tAllow).toFixed(1)+' '+unit+'.'});
+      }
+    }
+  }
+
+  /* ── pre-plating GAUGE pitch diameters ────────────────────────────────────────
+     GO / NOT GO gauge sizes that police the thread BEFORE it is plated, i.e. against
+     the pre-plate band rather than against the finished product limits.
+
+     ⚠ SOURCE STATUS — DERIVED, NOT TABULATED.  Neither ISO 1502 nor ASME B1.2 covers
+     gauging a thread that will later be coated; ISO 965-1 clause 12 defines the
+     pre-plate band and stops there.  Each convention below applies a PLACEMENT RULE
+     that IS sourced to a band the standard never contemplated.  The placement is
+     standard; the band is our engineering choice.
+
+     TWO CONVENTIONS (⚠ DEFAULT CHANGED 26.08.2026 BY EMIL — C IS NOW THE DEFAULT):
+
+     C  taylor   Taylor / ASME B1.2 Table 4 placement: gauge basic size sits ON the
+                 limit and the tolerance is applied UNILATERALLY INTO the band, so the
+                 pair accepts exactly the legal band and no more.  Tolerance is a user
+                 input (default 8 µm, raised from 5 µm on 26.08.2026) because no table
+                 covers this case.  DEFAULT.
+     A  isoTd2   ISO 1502 placement, Table 4 entered with the DECLARED CLASS tolerance
+                 T_D2.  This is what ISO 1502 literally names — Table 4 is indexed by
+                 the tolerance of the thread, and the thread's tolerance is its class;
+                 the pre-plate band is an allocation derived from it, not a class of
+                 its own.  Kept and fully working; no longer the default.
+
+     ⚠ WHY THE DEFAULT MOVED (Emil, 26.08.2026): A was made the default on 24.08.2026 on
+     the argument that it is the traceable-to-ISO answer.  It is — but on a PLATED thread
+     it produces numbers Emil is not prepared to put on a gauge drawing, because ISO 1502
+     placement lets the pair accept threads outside the pre-plate band (83,5 µm passed
+     against a 76,0 µm legal band on M14x1-4H at 7–13 µm).  Traceability lost to acceptance:
+     the gauge exists to reject bad threads, and a default that knowingly passes them is the
+     wrong thing to hand someone who has not read this comment.  A is one selection away for
+     anyone who wants the ISO-literal figure.
+     The 8 µm tolerance is the same judgement applied to the gauge maker: 5 µm was the
+     tightest defensible number, not a practical one.  8 µm spends 6 µm more of the shop
+     window (2·T total) and keeps the zero-escape property intact, because C's escape is
+     zero for ANY T that fits inside the band — the tolerance controls how hard the gauge is
+     to MAKE, never what it ACCEPTS.  That is the 24.08 lesson written into the code.
+
+     A THIRD CONVENTION "B" EXISTED AND WAS DELETED 24.08.2026 BY EMIL.  It was ISO 1502
+     placement with Table 4 entered on the PRE-PLATE BAND instead of the class.  It was
+     the original default and it was wrong to keep once A was chosen: it leaked on BOTH
+     ends (1,5 µm past the maximum-material limit and 7,0 µm past the least-material
+     limit on M14x1-4H at 7–13 µm coating) where A leaks on one, and it passed a WIDER
+     window overall (84,5 µm against A's 83,5, legal band 76,0).  Its only gain was
+     5 µm more shop room, bought by accepting bad parts.  Recorded here so nobody
+     re-derives it as a good idea.  The letters A and C are kept as-is deliberately —
+     renaming C to B would silently change what an older printout means.
+
+     ⚠ A CAN ACCEPT OUT-OF-LIMIT THREADS.  ISO 1502 biases toward not falsely rejecting
+     good parts and spends tolerance on gauge life: it offsets the GO zone by Z and
+     places the NOT GO zone wholly OUTSIDE the band.  On an unplated thread holding the
+     full class that is reasonable.  On a plated one, where part of the band has already
+     gone to coating spread, it is the wrong way round.  The escape figures are
+     therefore COMPUTED AND DISPLAYED for whichever mode is chosen, never implicit.  */
+  let platGauge=null;
+  if(plat && gauge && ok && isFinite(plat.pdMax) && isFinite(plat.pdMin)){
+    const band = plat.pdMax - plat.pdMin;
+    const uu   = (SYS==='iso')?1000:1e6;
+    const un   = (SYS==='iso')?' µm':' µin';
+    const pgMode = ($('pgMode') ? $('pgMode').value : 'taylor');
+    platGauge = {kind:gauge.kind, mode:plat.mode, band, pgMode,
+                 goPd: ext?plat.pdMax:plat.pdMin,
+                 ngPd: ext?plat.pdMin:plat.pdMax};
+    if(band<=0){
+      flags.push({t:'err',m:'The pre-plate pitch-ø band is zero or negative, so no pre-plating '+
+        'gauge can be defined. Reduce the coating thickness spread.'});
+      platGauge=null;
+    }
+    else if(pgMode==='taylor'){
+      /* ── C — Taylor, unilateral into the band (ASME B1.2 Table 4 placement) ──
+         rows 3/5 (rings) and 10/12 (plugs): basic size ON the product limit, gauge
+         tolerance applied unilaterally INWARD.  Both zones lie inside the band, so the
+         widest window the pair can accept is exactly the band itself.                */
+      const tIn = parseFloat($('pgTol') ? $('pgTol').value : '8');
+      const T = (isFinite(tIn) && tIn>0 ? tIn : 8)/uu;
+      platGauge.taylor=true; platGauge.T=T; platGauge.TdispUm=T*uu;
+      if(ext){ platGauge.goHi=plat.pdMax;   platGauge.goLo=plat.pdMax-T;
+               platGauge.ngHi=plat.pdMin+T; platGauge.ngLo=plat.pdMin; }
+      else   { platGauge.goHi=plat.pdMin+T; platGauge.goLo=plat.pdMin;
+               platGauge.ngHi=plat.pdMax;   platGauge.ngLo=plat.pdMax-T; }
+      platGauge.goCentre=(platGauge.goHi+platGauge.goLo)/2;
+      platGauge.ngCentre=(platGauge.ngHi+platGauge.ngLo)/2;
+      /* no tabulated wear allowance exists for this convention — the wear limit IS the
+         product limit, because any wear past it starts accepting out-of-limit threads */
+      platGauge.wearIsLimit=true;
+      platGauge.goWear = ext?plat.pdMax:plat.pdMin;
+      if(2*T>=band) flags.push({t:'err',m:'The two gauge zones together ('+(2*T*uu).toFixed(1)+un+
+        ') consume the whole pre-plate band ('+(band*uu).toFixed(1)+un+'), leaving nothing to manufacture in.'});
+    }
+    else if(gauge.iso){
+      /* ── A / B — ISO 1502 placement; the modes differ ONLY in the Table 4 lookup ── */
+      const idx = Tpd;                                 /* µm — the DECLARED CLASS tolerance */
+      const t4=gLookup(G_T4,idx), t5=gLookup(G_T5,idx);
+      if(t4){
+        platGauge.iso=true; platGauge.idxUm=idx; platGauge.idxRow=t4[0];
+        platGauge.idxBasis='declared class T'+(ext?'d2':'D2');
+        platGauge.TR=t4[1]; platGauge.TPL=t4[2]; platGauge.ZR=t4[5]; platGauge.ZPL=t4[6];
+        const T=(ext?t4[1]:t4[2])/1000, Z=(ext?t4[5]:t4[6])/1000;
+        platGauge.T=T; platGauge.Z=Z; platGauge.TdispUm=T*1000;
+        platGauge.goCentre = ext ? (plat.pdMax - Z) : (plat.pdMin + Z);
+        platGauge.goHi = platGauge.goCentre + T/2;
+        platGauge.goLo = platGauge.goCentre - T/2;
+        platGauge.ngCentre = ext ? (plat.pdMin - T/2) : (plat.pdMax + T/2);
+        platGauge.ngHi = platGauge.ngCentre + T/2;
+        platGauge.ngLo = platGauge.ngCentre - T/2;
+        if(t5){
+          platGauge.wGO = ext?t5[1]:t5[2]; platGauge.wNG = ext?t5[3]:t5[4];
+          platGauge.goWear = platGauge.goCentre + (ext? platGauge.wGO/1000 : -platGauge.wGO/1000);
+          platGauge.ngWear = platGauge.ngCentre + (ext? platGauge.wNG/1000 : -platGauge.wNG/1000);
+        }
+      } else {
+        flags.push({t:'warn',m:'Lookup value '+idx.toFixed(0)+' µm is outside ISO 1502 Table 4 '+
+          '(6–670 µm), so no gauge-making tolerance is available. Target sizes are still exact.'});
+      }
+    }
+    else if(gauge.b12 && gauge.xPd!=null){
+      /* inch — ASME B1.2 class X, already unilateral-inward; indexed by tpi and ø, so
+         the plating band does not change it */
+      platGauge.b12=true; platGauge.xPd=gauge.xPd; platGauge.T=gauge.xPd; platGauge.TdispUm=gauge.xPd*uu;
+      if(ext){ platGauge.goHi=plat.pdMax;             platGauge.goLo=plat.pdMax-gauge.xPd;
+               platGauge.ngHi=plat.pdMin+gauge.xPd;   platGauge.ngLo=plat.pdMin; }
+      else   { platGauge.goHi=plat.pdMin+gauge.xPd;   platGauge.goLo=plat.pdMin;
+               platGauge.ngHi=plat.pdMax;             platGauge.ngLo=plat.pdMax-gauge.xPd; }
+      platGauge.goCentre=(platGauge.goHi+platGauge.goLo)/2;
+      platGauge.ngCentre=(platGauge.ngHi+platGauge.ngLo)/2;
+      platGauge.wearIsLimit=true;
+      platGauge.goWear = ext?plat.pdMax:plat.pdMin;
+    }
+
+    /* ── escape analysis — computed for whichever convention is active ──
+       goEsc   how far BEYOND the maximum-material limit the most permissive GO gauge
+               still accepts (0 = cannot pass an out-of-limit thread)
+       ngEsc   same for the NOT GO against the least-material limit
+       widest  widest pre-plate window the PAIR can accept — worst case for quality
+       shop    narrowest window the SHOP must hold — worst case for manufacture      */
+    if(platGauge && platGauge.goHi!=null && platGauge.ngHi!=null){
+      const P=platGauge;
+      P.goEsc = Math.max(0, ext ? (P.goHi - plat.pdMax) : (plat.pdMin - P.goLo));
+      P.ngEsc = Math.max(0, ext ? (plat.pdMin - P.ngLo) : (P.ngHi - plat.pdMax));
+      P.widest = ext ? (P.goHi - P.ngLo) : (P.ngHi - P.goLo);
+      P.shop   = ext ? (P.goLo - P.ngHi) : (P.ngLo - P.goHi);
+      P.legalBand = band;
+      if(P.goWear!=null && !P.wearIsLimit)
+        P.goWearEsc = Math.max(0, ext ? (P.goWear - plat.pdMax) : (plat.pdMin - P.goWear));
+      if(P.shop<=0) flags.push({t:'err',m:'The two gauge zones leave no usable manufacturing band '+
+        'before plating — the pre-plate band is too narrow for a gauge of this tolerance.'});
+      if(P.goEsc>1e-12 || P.ngEsc>1e-12)
+        flags.push({t:'warn',m:'This gauge pair can accept threads OUTSIDE the pre-plate band — up to '+
+          (P.goEsc*uu).toFixed(1)+un+' past the maximum-material limit and '+(P.ngEsc*uu).toFixed(1)+un+
+          ' past the least-material limit, so the widest window it passes is '+(P.widest*uu).toFixed(1)+un+
+          ' against a legal band of '+(band*uu).toFixed(1)+un+'. This is ISO 1502 working as designed '+
+          '(it favours not falsely rejecting good parts); convention C accepts exactly the legal band.'});
+      if(P.goWearEsc>1e-12)
+        flags.push({t:'warn',m:'A fully worn GO gauge (ISO 1502 Table 5, W = '+P.wGO+' µm) reaches '+
+          f(P.goWear)+', accepting threads up to '+(P.goWearEsc*uu).toFixed(1)+un+' past the '+
+          'maximum-material limit. Consider specifying the wear limit at the pre-plate limit '+
+          f(ext?plat.pdMax:plat.pdMin)+' instead.'});
+    }
+  }
+  /* designation */
+  let desig;
+  if(SYS==='iso'){
+    desig='M'+fmtP(D)+'×'+fmtP(P);
+    if(COARSE[D]===P && starts===1) desig='M'+fmtP(D);
+    if(starts>1) desig='M'+fmtP(D)+'×Ph'+fmtP(lead)+'P'+fmtP(P);
+    desig+=' - '+clsStr;
+    if($('hand').value==='LH') desig+=' - LH';
+  } else {
+    const tpi=1/P;
+    desig=fmtP(D)+'-'+fmtP(Math.round(tpi*1000)/1000)+' '+$('unForm').value+'-'+clsStr;
+    if($('hand').value==='LH') desig+=' LH';
+  }
+
+  return {D,P,ext,starts,H,d2b,d1b,d3b,dev,devC,Tpd,Tcd,TpdSrc,TcdSrc,lim,eng,ok,lead,leadAngle,
+          wBest,wire,useCorr,overWire,betwWire,Rmin,Rpref,Cmax,Cmin,plat,platGauge,tap,gauge,flags,desig,
+          clsStr,ri,pdG,pdP,cdG,cdP,unCls,SYS};
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════════════════════════════════ */
+let LAST=null;
+function uf(){ /* working-unit → display-unit factor */
+  const du=$('dunit').value;
+  if(SYS==='iso') return du==='in' ? 1/25.4 : 1;
+  return du==='mm' ? 25.4 : 1;
+}
+function f(v){ const n=parseInt($('dp').value); return v==null?'—':(v*uf()).toFixed(n); }
+function fr(v){ const n=parseInt($('dp').value); return v==null?'—':v.toFixed(n); } /* already display units */
+function uName(){ return $('dunit').value==='mm'?'mm':'in'; }
+function microName(){ return SYS==='iso' ? 'µm' : 'µin'; }
+function toMicro(v){ return v==null?null:(SYS==='iso'? v : v); }
+
+function render(){
+  const r=compute(); LAST=r;
+  syncHistName();          /* the history label follows the engine, never a stale designation */
+  if(r.err){ $('head').innerHTML='<div class="flag err">'+r.err+'</div>'; return; }
+  const ext=r.ext, L=r.lim, mid=(a,b)=>(a==null||b==null)?null:(a+b)/2;
+
+  $('head').innerHTML =
+    '<div class="desig">'+r.desig+'</div>'+
+    '<div class="sub" style="margin-top:6px">'+
+      (ext?'External thread':'Internal thread')+
+      ' &middot; '+(SYS==='iso'?('P = '+fmtP(r.P)+' mm'):(fmtP(Math.round(1/r.P*1000)/1000)+' tpi'))+
+      (r.starts>1?' &middot; '+r.starts+' starts, lead '+f(r.lead)+' '+uName():'')+
+      (SYS==='iso'?'<span class="pill">engagement '+r.eng.group+'</span>':'')+
+      (SYS==='iso'&&r.ri>=0?'<span class="pill">ø range '+DRANGES[r.ri][0]+'–'+DRANGES[r.ri][1]+'</span>':'')+
+      '<span class="pill src">'+(SYS==='iso'?'ISO 965-1':'ASME B1.1')+'</span>'+
+    '</div>';
+  $('flags').innerHTML=r.flags.map(x=>'<div class="flag '+x.t+'">'+x.m+'</div>').join('');
+
+  /* ---- diameters ---- */
+  let h='<tr><th>Diameter</th><th>Max</th><th>Mid</th><th>Min</th></tr>';
+  if(r.ok){
+    h+='<tr><td class="lab">Major ø '+(ext?'d':'D')+'</td><td class="max">'+f(L.majMax)+
+       '</td><td class="mid">'+f(mid(L.majMax,L.majMin))+'</td><td class="min">'+f(L.majMin)+'</td></tr>'+
+       '<tr><td class="lab">Pitch ø '+(ext?'d2':'D2')+'</td><td class="max">'+f(L.pdMax)+
+       '</td><td class="mid">'+f(mid(L.pdMax,L.pdMin))+'</td><td class="min">'+f(L.pdMin)+'</td></tr>';
+    if(ext){
+      h+='<tr><td class="lab">Minor ø d3 <span class="pill src">1 value</span></td>'+
+         '<td colspan="3" style="text-align:right">'+f(L.minVal)+'</td></tr>';
+    } else {
+      h+='<tr><td class="lab">Minor ø D1</td><td class="max">'+f(L.minMax)+
+         '</td><td class="mid">'+f(mid(L.minMax,L.minMin))+'</td><td class="min">'+f(L.minMin)+'</td></tr>';
+    }
+  }
+  h+='<tr class="grp"><td colspan="4">Basic sizes</td></tr>'+
+     '<tr><td class="lab">Basic major ø</td><td colspan="3">'+f(r.D)+'</td></tr>'+
+     '<tr><td class="lab">Basic pitch ø  (D − 0,649519 P)</td><td colspan="3">'+f(r.d2b)+'</td></tr>'+
+     '<tr><td class="lab">Basic minor ø D1 (D − 1,082532 P)</td><td colspan="3">'+f(r.d1b)+'</td></tr>'+
+     '<tr><td class="lab">Basic minor ø d3 (D − 1,226869 P)</td><td colspan="3">'+f(r.d3b)+'</td></tr>';
+  if(ext && r.Cmax!=null){
+    h+='<tr class="grp"><td colspan="4">Root truncation — ISO 965-1 clause 11</td></tr>'+
+       '<tr><td class="lab">C max</td><td colspan="3">'+f(r.Cmax)+'</td></tr>'+
+       '<tr><td class="lab">C min = 0,125 P</td><td colspan="3">'+f(r.Cmin)+'</td></tr>';
+  }
+  $('tDia').innerHTML=h;
+  $('diaNote').innerHTML = ext
+    ? '<b>d3 is a single value, not a max/min pair.</b> ISO 965-3:1998 Table 1 tabulates the external minor '+
+      'diameter as one deviation, <code>−(|es| + H/6)</code>, on an H/6-truncation basis, "for stress '+
+      'calculation". The actual root is controlled by form (clause 11), not by a diameter tolerance — hence '+
+      'C max / C min above rather than d3 max / d3 min.'
+    : '<b>No maximum major ø exists for internal threads.</b> Verified against two standards: ISO 965-1 '+
+      'tabulates none, and ISO 965-3 Table 1 lists only pitch and minor diameter columns for internal threads. '+
+      'The root is limited by form (clause 11): it must not transgress the basic profile.';
+
+  /* ---- tolerances ---- */
+  const MU=microName();
+  let t='<tr><th>Item</th><th>'+MU+'</th><th>'+uName()+'</th></tr>';
+  if(SYS==='iso'){
+    t+='<tr><td class="lab">Fundamental deviation ('+(ext?'es':'EI')+', pos '+r.pdP+')</td><td>'+
+       (r.dev==null?'—':(r.dev>0?'+':'')+r.dev)+'</td><td>'+(r.dev==null?'—':f(r.dev/1000))+'</td></tr>';
+    if(r.pdP!==r.cdP) t+='<tr><td class="lab">Fund. deviation (crest, pos '+r.cdP+')</td><td>'+
+       (r.devC==null?'—':(r.devC>0?'+':'')+r.devC)+'</td><td>'+(r.devC==null?'—':f(r.devC/1000))+'</td></tr>';
+    t+='<tr><td class="lab">Pitch ø tolerance, grade '+r.pdG+'</td><td>'+(r.Tpd==null?'—':r.Tpd)+
+       '</td><td>'+(r.Tpd==null?'—':f(r.Tpd/1000))+'</td></tr>'+
+       '<tr><td class="lab">Crest ø tolerance, grade '+r.cdG+'</td><td>'+(r.Tcd==null?'—':r.Tcd)+
+       '</td><td>'+(r.Tcd==null?'—':f(r.Tcd/1000))+'</td></tr>';
+  } else {
+    const mi=v=>v==null?'—':Math.round(v*1e6);
+    t+='<tr><td class="lab">Allowance (external)</td><td>'+(r.dev==null?'—':Math.round(r.dev))+
+       '</td><td>'+(r.dev==null?'—':f(r.dev/1e6))+'</td></tr>'+
+       '<tr><td class="lab">Pitch ø tolerance, class '+r.unCls+'</td><td>'+mi(r.Tpd)+
+       '</td><td>'+f(r.Tpd)+'</td></tr>'+
+       '<tr><td class="lab">'+(ext?'Major':'Minor')+' ø tolerance</td><td>'+mi(r.Tcd)+
+       '</td><td>'+f(r.Tcd)+'</td></tr>';
+  }
+  t+='<tr><td class="lab" colspan="3" style="color:#6c7d92;font-size:11px">'+r.TpdSrc+' · '+r.TcdSrc+'</td></tr>';
+  if(SYS==='iso'){
+    t+='<tr class="grp"><td colspan="3">Length of engagement (Table 2)</td></tr>'+
+       '<tr><td class="lab">Group</td><td colspan="2">'+r.eng.group+'</td></tr>'+
+       '<tr><td class="lab">S — up to &amp; incl.</td><td colspan="2">'+(r.eng.lo==null?'—':f(r.eng.lo)+' '+uName())+'</td></tr>'+
+       '<tr><td class="lab">N — over … up to</td><td colspan="2">'+(r.eng.lo==null?'—':f(r.eng.lo)+' … '+f(r.eng.hi))+'</td></tr>'+
+       '<tr><td class="lab">L — over</td><td colspan="2">'+(r.eng.hi==null?'—':f(r.eng.hi)+' '+uName())+'</td></tr>';
+    const rec=(ext?REC_EXT:REC_INT), g=r.eng.group;
+    if(g!=='—'){
+      t+='<tr class="grp"><td colspan="3">Recommended classes, group '+g+'</td></tr>';
+      ['fine','medium','coarse'].forEach(q=>{
+        const l=rec[q][g]||[];
+        t+='<tr><td class="lab">'+q+'</td><td colspan="2">'+(l.length?l.join('  '):'—')+'</td></tr>';
+      });
+    }
+  } else {
+    t+='<tr class="grp"><td colspan="3">Length of engagement</td></tr>'+
+       '<tr><td class="lab">LE used in the tolerance formula</td><td colspan="2">'+f(r.eng.len)+' '+uName()+'</td></tr>'+
+       '<tr><td class="lab" colspan="2" style="color:#6c7d92;font-size:11px">'+
+       'ASME B1.1 table values use LE = basic major ø.</td><td></td></tr>';
+  }
+  $('tTol').innerHTML=t;
+
+  /* ---- tapping drill ---- */
+  if(r.tap){
+    const T=r.tap;
+    let tp='<tr><th>Item</th><th>Hole ø</th><th>% thread</th></tr>';
+    tp+='<tr><td class="lab">Target '+T.pct+' % of thread</td><td class="mid">'+f(T.hole)+
+        '</td><td>'+T.pct.toFixed(1)+'</td></tr>';
+    if(T.outOfRange){
+      const unit=(T.drillSet==='metric')?' mm':'"';
+      tp+='<tr><td class="lab">Nearest drill</td><td colspan="2" style="text-align:right;color:#ffb454">'+
+          (T.above ? 'target is above the largest tabulated drill ('+fr(T.rangeHi)+unit+') — bore to size'
+                   : 'target is below the smallest tabulated drill ('+fr(T.rangeLo)+unit+')')+
+          '</td></tr>';
+    } else {
+      if(T.nearest) tp+='<tr><td class="lab">Nearest drill — <b>'+T.nearest[0]+'</b></td><td class="mid">'+
+          fr(T.nearest[1])+'</td><td>'+(T.nearestPct==null?'—':T.nearestPct.toFixed(1))+'</td></tr>';
+      if(T.under && (!T.nearest || T.under[0]!==T.nearest[0]))
+        tp+='<tr><td class="lab">Largest drill ≤ target — '+T.under[0]+'</td><td class="mid">'+
+          fr(T.under[1])+'</td><td>'+(T.underPct==null?'—':T.underPct.toFixed(1))+'</td></tr>';
+    }
+    tp+='<tr class="grp"><td colspan="3">Hole must finish inside the D1 limits</td></tr>'+
+        '<tr><td class="lab">D1 min (max material)</td><td class="min">'+f(T.holeForD1min)+
+        '</td><td>'+T.pctAtD1min.toFixed(1)+'</td></tr>'+
+        '<tr><td class="lab">D1 max (least material)</td><td class="max">'+f(T.holeForD1max)+
+        '</td><td>'+T.pctAtD1max.toFixed(1)+'</td></tr>';
+    if(T.nearest){
+      const okDrill = T.nearest[1]/uf()>=T.holeForD1min-1e-9 && T.nearest[1]/uf()<=T.holeForD1max+1e-9;
+      tp+='<tr><td class="lab">Nearest drill inside D1 limits?</td><td colspan="2" style="text-align:right;color:'+
+          (okDrill?'#7ee081':'#ffb454')+'">'+(okDrill?'yes':'NO — outside the class limits')+'</td></tr>';
+    } else {
+      tp+='<tr><td class="lab">Nearest drill inside D1 limits?</td><td colspan="2" style="text-align:right;'+
+          'color:#8fa3b8">n/a — no drill in the table; bore between the two limits above</td></tr>';
+    }
+    $('tTap').innerHTML=tp;
+    $('tapNote').innerHTML='<b>Convention:</b> 100 % of thread = 0,75 H, i.e. hole = D − (%/100) × 1,299038 × P. '+
+      'Taken from <b>FED-STD-H28/2B</b> Table II.A.1 note 1; reproduces that standard\'s own percent columns '+
+      '(1.750-8 UN, minor 1.615 → 83,1 %). The drill list is nominal size only — real drills cut oversize '+
+      '(H28 tabulates a "probable oversize" of roughly 0,0015–0,0026 in on small sizes), so check the finished '+
+      'hole against the D1 limits above.';
+  } else {
+    $('tTap').innerHTML='<tr><td class="lab" style="padding:12px">Tapping drill applies to internal threads.</td></tr>';
+    $('tapNote').innerHTML='Switch <b>Thread type</b> to Internal to size a tapping drill.';
+  }
+
+  /* ---- gauges & inspection ---- */
+  let gt='<tr><th>Item</th><th>High</th><th>Low</th></tr>';
+  if(r.gauge){
+    const G=r.gauge, isRing=G.kind==='ring', MUg='µm';
+    /* When plating is active there are TWO gauge tables on this page — these, for the
+       finished part, and section 12's, for the pre-plate condition. They differ by the
+       whole plating allowance (4·t) and are easy to confuse, so each one says which
+       stage it belongs to and points at the other.  Root cause 24.08.2026: the finished
+       gauges were read as the pre-plate gauges. Labelling only — no value changes.   */
+    const plated = !!(r.plat && r.platGauge);
+    gt+='<tr class="grp"><td colspan="3">'+
+        (isRing?'Screw RING gauges — external thread':'Screw PLUG gauges — internal thread')+
+        (plated?' — <b>FINISHED (PLATED) SIZE</b>':'')+
+        (G.iso?'<span class="pill src">ISO 1502</span>':'<span class="pill">target sizes only</span>')+'</td></tr>';
+    if(plated)
+      gt+='<tr><td colspan="3" class="lab">⚠ These gauge the part <b>after</b> plating. To inspect it '+
+          '<b>before</b> it goes to the plater, use the pre-plating gauge table in <b>section 12</b> — '+
+          'those sizes are larger by the plating allowance 4·t and are the ones to buy if you only buy '+
+          'one pair.</td></tr>';
+    if(G.iso){
+      gt+='<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td>'+
+          '<td class="max">'+f(G.goHi)+'</td><td class="min">'+f(G.goLo)+'</td></tr>'+
+          '<tr><td class="lab">&nbsp;&nbsp;zone centre &amp; tolerance</td><td>'+f(G.goCentre)+
+          '</td><td>'+(isRing?'T<sub>R</sub> ':'T<sub>PL</sub> ')+(isRing?G.TR:G.TPL)+' '+MUg+'</td></tr>'+
+          '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td>'+
+          '<td class="max">'+f(G.ngHi)+'</td><td class="min">'+f(G.ngLo)+'</td></tr>'+
+          '<tr><td class="lab">Workpiece limit the gauge represents</td><td>'+f(G.goPd)+'</td><td>'+f(G.ngPd)+'</td></tr>'+
+          '<tr class="grp"><td colspan="3">ISO 1502 Table 4 values for T'+(r.ext?'d2':'D2')+' = '+r.Tpd+' µm</td></tr>'+
+          '<tr><td class="lab">T<sub>R</sub> ring / T<sub>PL</sub> plug / T<sub>CP</sub> check plug</td>'+
+          '<td colspan="2">'+G.TR+' / '+G.TPL+' / '+G.TCP+' '+MUg+'</td></tr>'+
+          '<tr><td class="lab">m (ring ↔ GO check plug)</td><td colspan="2">'+G.mVal+' '+MUg+'</td></tr>'+
+          '<tr><td class="lab">Z<sub>R</sub> / Z<sub>PL</sub></td><td colspan="2">'+G.ZR+' / '+G.ZPL+' '+MUg+
+          (G.ZR<0?'  <span class="pill">Z<sub>R</sub> outside T<sub>d2</sub></span>':'')+'</td></tr>';
+      if(G.wGO!=null)
+        gt+='<tr class="grp"><td colspan="3">Table 5 — permissible wear on pitch ø</td></tr>'+
+            '<tr><td class="lab">GO gauge</td><td colspan="2">'+G.wGO+' '+MUg+'</td></tr>'+
+            '<tr><td class="lab">NOT GO gauge</td><td colspan="2">'+G.wNG+' '+MUg+'</td></tr>';
+      if(G.flank)
+        gt+='<tr class="grp"><td colspan="3">Table 6 — tolerance on each flank angle (P = '+fmtP(r.P)+' mm)</td></tr>'+
+            '<tr><td class="lab">T<sub>α1</sub>/2 (figs 5 &amp; 6) / T<sub>α2</sub>/2 (figs 7 &amp; 8)</td>'+
+            '<td colspan="2">±'+G.flank[0]+"' / ±"+G.flank[1]+"'</td></tr>";
+      gt+='<tr class="grp"><td colspan="3">Table 7 — pitch tolerance T<sub>p</sub> by gauge thread length</td></tr>'+
+          '<tr><td class="lab">≤32 mm / &gt;32–50 mm / &gt;50–80 mm</td><td colspan="2">5 / 6 / 7 '+MUg+'</td></tr>';
+      if(G.plainTol!=null)
+        gt+='<tr class="grp"><td colspan="3">Table '+(r.ext?'8':'9')+' — plain GO gauge for the '+
+            (r.ext?'major':'minor')+' ø</td></tr>'+
+            '<tr><td class="lab">Plain GO gauge size</td><td class="max">'+f(G.plainHi)+'</td><td class="min">'+f(G.plainLo)+'</td></tr>'+
+            '<tr><td class="lab">&nbsp;&nbsp;'+(r.ext?'H₂/2':'H₁/2')+' / '+(r.ext?'Z₂':'Z₁')+
+            (r.ext?' / H<sub>p</sub>/2':'')+'</td><td colspan="2">'+G.plainTol+' / '+G.plainZ+
+            (r.ext?' / '+G.plainCheck:'')+' '+MUg+'</td></tr>';
+    } else {
+      gt+='<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td><td colspan="2">'+f(G.goPd)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td><td colspan="2">'+f(G.ngPd)+'</td></tr>'+
+          '<tr><td class="lab">Plain GO '+(isRing?'(major ø)':'(minor ø)')+'</td><td colspan="2">'+f(G.goPlain)+'</td></tr>'+
+          '<tr><td class="lab">Plain NOT GO</td><td colspan="2">'+f(G.ngPlain)+'</td></tr>';
+    }
+    if(G.tolManual!=null) gt+='<tr><td class="lab">Gauge PD tolerance (manual override)</td><td colspan="2">±'+f(G.tolManual/2)+'</td></tr>';
+    if(G.wearManual!=null) gt+='<tr><td class="lab">Wear allowance (manual override)</td><td colspan="2">'+f(G.wearManual)+'</td></tr>';
+  }
+  gt+='<tr class="grp"><td colspan="3">Profile</td></tr>'+
+      '<tr><td class="lab">H (fundamental triangle)</td><td colspan="2">'+f(r.H)+'</td></tr>'+
+      '<tr><td class="lab">Thread height 5H/8</td><td colspan="2">'+f(r.H*5/8)+'</td></tr>'+
+      '<tr><td class="lab">Lead</td><td colspan="2">'+f(r.lead)+'</td></tr>'+
+      '<tr><td class="lab">Lead angle at pitch ø</td><td colspan="2">'+r.leadAngle.toFixed(3)+'°</td></tr>'+
+      '<tr><td class="lab">Root radius min = 0,125 P</td><td colspan="2">'+f(r.Rmin)+'</td></tr>'+
+      '<tr><td class="lab">Root radius preferred = H/6</td><td colspan="2">'+f(r.Rpref)+'</td></tr>'+
+      '<tr class="grp"><td colspan="3">Wire / ball measurement'+(r.useCorr?' — lead-angle corrected':'')+'</td></tr>'+
+      '<tr><td class="lab">Wire ø used</td><td colspan="2">'+f(r.wire)+'</td></tr>';
+  if(r.ok){
+    const fn=r.ext?r.overWire:r.betwWire;
+    gt+='<tr><td class="lab">'+(r.ext?'Over wires @ d2 max':'Between balls @ D2 max')+'</td><td colspan="2">'+f(fn(r.lim.pdMax))+'</td></tr>'+
+        '<tr><td class="lab">'+(r.ext?'Over wires @ d2 min':'Between balls @ D2 min')+'</td><td colspan="2">'+f(fn(r.lim.pdMin))+'</td></tr>';
+    if(r.useCorr){
+      const lam=Math.atan2(r.lead,Math.PI*r.lim.pdMax);
+      gt+='<tr><td class="lab">Correction applied</td><td colspan="2">'+f(0.75*r.wire*Math.tan(lam)*Math.tan(lam))+'</td></tr>';
+    }
+  }
+  $('tGeo').innerHTML=gt;
+  $('geoNote').innerHTML=
+    (r.gauge&&r.gauge.iso
+      ? '<b>ISO 1502:1996 Tables 4–9 are now built in</b> (values in µm, indexed by the workpiece pitch-ø '+
+        'tolerance, not by diameter). The <b>GO</b> tolerance zone is placed from the standard\'s own symbol '+
+        'definitions — Z<sub>PL</sub> is the distance from the middle of T<sub>PL</sub> to the <i>lower</i> '+
+        'limit of the workpiece, Z<sub>R</sub> from the middle of T<sub>R</sub> to the <i>upper</i> limit — '+
+        'with the sign fixed by Table 4 note 1 (the formula subtracts Z<sub>R</sub>, so a negative Z<sub>R</sub> '+
+        'puts the zone outside T<sub>d2</sub>). <b>The NOT GO placement is now taken from the standard too</b> — '+
+        'clause 13 with Table 12 (internal) and Table 10 (external). Table 12 gives the NOT GO screw plug '+
+        'pitch ø as D<sub>2</sub> + EI + T<sub>D2</sub> + T<sub>PL</sub>/2 &plusmn; T<sub>PL</sub>/2; since '+
+        'D<sub>2</sub> + EI + T<sub>D2</sub> is D2max, the zone runs D2max … D2max + T<sub>PL</sub>, i.e. wholly '+
+        '<i>outside</i> the workpiece band, extending away from it. Table 10 rows 12 and 16 put the solid NOT GO '+
+        'ring centre at d2min &minus; T<sub>R</sub>/2, the exact mirror. <b>Nothing in the gauge section is '+
+        'assumed any more.</b>'
+      : ((r.gauge&&r.gauge.b12)
+        ? '<b>ASME B1.2-1983 Table 4 is now built in.</b> B1.2 places the gage basic size exactly <i>on</i> the '+
+          'product limit and applies the gagemaker\'s tolerance <b>unilaterally, into the product band</b>: GO ring '+
+          '= max PD of external thread, tolerance minus (row 3); NOT GO (LO) ring = min PD, tolerance plus (row 5); '+
+          'GO plug = min PD of internal thread, tolerance plus (row 10); NOT GO (HI) plug = max PD, tolerance minus '+
+          '(row 12). <b>Both zones therefore lie wholly INSIDE the product tolerance — the opposite of ISO 1502</b>, '+
+          'which puts its NOT GO zone outside. Verified against B1.2\'s own worked examples for 1/4-20, all four '+
+          'exact: 2B GO plug .2175, 2B NOT GO plug .2224, 2A GO ring .2164, 2A NOT GO ring .2127. '+
+          'Tolerances are <b>class X</b> (Table 6) — per §3.5 the default for any gage that directly checks '+
+          'product. <b>Class W (Table 7) is not yet entered</b>, nor are Table 9\'s computing constants.'
+        : '<b>Gauge sizes follow the Taylor principle</b>: GO at the workpiece maximum-material limit with a full '+
+          'profile, NOT GO at the least-material limit, truncated. Target sizes are exact; the gauge-making '+
+          'tolerance for this pitch is not in ASME B1.2 Table 6.'))+
+    '<br><br>'+
+    '<b>Wire measurement:</b> M = d2 + W(1 + cosec α) − (P/2)·cot α, which for α = 30° is '+
+    'M = d2 + 3W − H. The optional lead-angle term is '+
+    '<code>+ W · 0,5 · tan²λ · cos α · cot α</code> = <code>+ 0,75 · W · tan²λ</code>, attributed to '+
+    'Machinery\'s Handbook. <b>It is off by default and is the one figure here not traceable to a primary '+
+    'standard I could obtain</b> — the sign is confirmed by geometry (the normal-plane groove is narrower than '+
+    'the axial one, so the wire rides higher and M increases), but treat the coefficient as the handbook value, '+
+    'not a standard. Van Keuren/H28 note the uncorrected form is "usually sufficiently accurate for lead angles '+
+    'up to 5 degrees" — this thread is at '+r.leadAngle.toFixed(2)+'°.';
+
+  /* ---- pre-plating ---- */
+  if(r.plat && r.ok){
+    const p=r.plat, after=p.mode==='after', MUn=microName();
+    let pt='<tr><th>Diameter</th><th>'+(after?'Pre-plate max':'As-plated max')+'</th><th>'+
+           (after?'Pre-plate min':'As-plated min')+'</th><th>Band</th></tr>';
+    pt+='<tr><td class="lab">Pitch ø (4t)</td><td class="max">'+f(p.pdMax)+'</td><td class="min">'+f(p.pdMin)+
+        '</td><td>'+f(p.pdMax-p.pdMin)+'</td></tr>'+
+        '<tr><td class="lab">Crest ø (2t)</td><td class="max">'+f(p.cdMax)+'</td><td class="min">'+f(p.cdMin)+
+        '</td><td>'+f(p.cdMax-p.cdMin)+'</td></tr>'+
+        '<tr class="grp"><td colspan="4">Coating</td></tr>'+
+        '<tr><td class="lab">Thickness range</td><td colspan="3">'+(p.tmin*p.u).toFixed(1)+' – '+
+        (p.tmax*p.u).toFixed(1)+' '+MUn+'</td></tr>'+
+        '<tr><td class="lab">Pitch ø growth 4t</td><td colspan="3">'+(4*p.tmin*p.u).toFixed(0)+' – '+
+        (4*p.tmax*p.u).toFixed(0)+' '+MUn+'</td></tr>'+
+        '<tr><td class="lab">Crest ø growth 2t</td><td colspan="3">'+(2*p.tmin*p.u).toFixed(0)+' – '+
+        (2*p.tmax*p.u).toFixed(0)+' '+MUn+'</td></tr>';
+    if(after) pt+='<tr><td class="lab">Band lost to plating spread</td><td colspan="3">'+
+        (p.shrink4*p.u).toFixed(0)+' '+MUn+'</td></tr>';
+    $('tPlat').innerHTML=pt;
+    $('platNote').innerHTML = after
+      ? 'Class treated as the <b>finished, plated</b> requirement: max limit backed off by 4·t<sub>max</sub>, '+
+        'min limit by 4·t<sub>min</sub>, so the usable band narrows by 4·(t<sub>max</sub>−t<sub>min</sub>).'
+      : 'ISO 965-1 clause 12: <i>"the tolerances apply to the parts before coating… After coating, the actual '+
+        'thread profile shall not at any point transgress the maximum material limits for positions H or h."</i>';
+
+    /* ---- pre-plating GAUGE pitch diameters ---- */
+    const PG=r.platGauge;
+    if(PG){
+      const isRingP=PG.kind==='ring', pre=(PG.mode==='after');
+      const uu=(r.SYS==='iso')?1000:1e6, un=(r.SYS==='iso')?' µm':' µin';
+      const um=v=>(v==null?'—':(v>=0?'':'')+(v*uu).toFixed(1)+un);
+      /* Derive the label from WHAT ACTUALLY RAN, not from the raw select value. An
+         unrecognised mode falls through to the ISO branch, and labelling that "—" while
+         computing A would be a silent mislabel on a number destined for a gauge drawing. */
+      const MODE = PG.taylor ? 'C — Taylor, tolerance unilateral into the band'
+                 : PG.b12    ? 'ASME B1.2 class X (inch — unilateral into band)'
+                 : PG.iso    ? 'A — ISO 1502, indexed on the declared class tolerance'
+                 : '—';
+      let g2='<tr><th>'+(pre?'Pre-plating gauge':'As-plated gauge')+' — '+
+             (isRingP?'screw ring':'screw plug')+'</th><th>Max</th><th>Min</th></tr>';
+      g2+='<tr><td colspan="3" class="lab">⚠ These gauge the part <b>'+
+          (pre?'before it goes to the plater':'after plating')+'</b>, against the '+
+          (pre?'pre-plate':'as-plated')+' limits above — <b>not</b> the finished-size gauges in '+
+          '<b>section 11</b>, which are smaller by the plating allowance 4·t.</td></tr>'+
+          '<tr class="grp"><td colspan="3">Convention: '+MODE+'</td></tr>'+
+          '<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td>'+
+          '<td class="max">'+f(PG.goHi)+'</td><td class="min">'+f(PG.goLo)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td>'+
+          '<td class="max">'+f(PG.ngHi)+'</td><td class="min">'+f(PG.ngLo)+'</td></tr>'+
+          '<tr><td class="lab">'+(pre?'Pre-plate':'As-plated')+' limit represented '+
+          '<span class="pill">GO / NOT GO — not max / min</span></td>'+
+          '<td>'+f(PG.goPd)+'</td><td>'+f(PG.ngPd)+'</td></tr>'+
+          '<tr><td class="lab">Gauge tolerance</td><td colspan="2">'+
+          (PG.TdispUm!=null?PG.TdispUm.toFixed(1)+un:'—')+
+          (PG.iso?(isRingP?'  (T<sub>R</sub>)':'  (T<sub>PL</sub>)'):'')+'</td></tr>';
+      if(PG.iso)
+        g2+='<tr><td class="lab">&nbsp;&nbsp;Table 4 row used</td><td colspan="2">'+
+            PG.idxUm.toFixed(0)+un+' ('+PG.idxBasis+') → row ≤'+PG.idxRow+
+            ',  Z = '+(isRingP?PG.ZR:PG.ZPL)+un+'</td></tr>';
+      /* ── the acceptance audit — the part that actually decides between conventions ── */
+      g2+='<tr class="grp"><td colspan="3">What this gauge pair actually accepts</td></tr>'+
+          '<tr><td class="lab">Legal pre-plate band</td><td colspan="2">'+um(PG.legalBand)+'</td></tr>'+
+          '<tr><td class="lab">GO can accept past the maximum-material limit</td><td colspan="2">'+
+          (PG.goEsc>1e-12?'<b>'+um(PG.goEsc)+'</b>':'none')+'</td></tr>'+
+          '<tr><td class="lab">NOT GO can accept past the least-material limit</td><td colspan="2">'+
+          (PG.ngEsc>1e-12?'<b>'+um(PG.ngEsc)+'</b>':'none')+'</td></tr>'+
+          '<tr><td class="lab">Widest window the pair passes'+
+          (PG.widest>PG.legalBand+1e-12?' <span class="pill">exceeds the legal band</span>':
+                                        ' <span class="pill">equals the legal band</span>')+
+          '</td><td colspan="2">'+um(PG.widest)+'</td></tr>'+
+          '<tr><td class="lab">Narrowest window the shop must hold</td><td colspan="2">'+um(PG.shop)+'</td></tr>';
+      /* ── wear ── */
+      g2+='<tr class="grp"><td colspan="3">Wear</td></tr>';
+      if(PG.wearIsLimit)
+        g2+='<tr><td class="lab">GO wear limit <span class="pill">we set it</span></td>'+
+            '<td colspan="2">'+f(PG.goWear)+' — the product limit itself; no tabulated allowance '+
+            'exists for this convention, and any wear past it starts accepting bad threads</td></tr>';
+      else if(PG.goWear!=null)
+        g2+='<tr><td class="lab">GO wear limit (ISO 1502 Table 5, W = '+PG.wGO+' µm)</td>'+
+            '<td colspan="2">'+f(PG.goWear)+'</td></tr>'+
+            '<tr><td class="lab">&nbsp;&nbsp;worn GO accepts past the limit</td><td colspan="2">'+
+            (PG.goWearEsc>1e-12?'<b>'+um(PG.goWearEsc)+'</b>  — consider clamping the wear limit to '+
+              f(PG.goPd)+' instead':'none')+'</td></tr>'+
+            '<tr><td class="lab">NOT GO wear limit (W = '+PG.wNG+' µm)</td><td colspan="2">'+
+            f(PG.ngWear)+' <span class="pill">wears toward over-rejection — safe</span></td></tr>';
+      $('tPlatG').innerHTML=g2;
+      $('platGNote').innerHTML =
+        '<b>⚠ DERIVED, NOT TABULATED.</b> Neither ISO 1502 nor ASME B1.2 covers gauging a thread that '+
+        'will later be coated, and ISO 965-1 clause 12 defines the pre-plate band but not gauges for it. '+
+        'Each convention applies a <i>sourced</i> placement rule to a band the standard never '+
+        'contemplated. The placement is standard; the band is an engineering choice.'+
+        '<br><br><b>A (ISO 1502 placement)</b> offsets the GO zone by Z and puts the NOT GO zone '+
+        'wholly <i>outside</i> the band, so the pair can pass threads beyond both limits — see the '+
+        'acceptance audit above. That is deliberate, not a defect: ISO 1502 favours not falsely '+
+        'rejecting good parts, and spends tolerance on gauge life. On an unplated thread holding the '+
+        'full class that trade is reasonable. On a plated one, where 4·(t<sub>max</sub>−t<sub>min</sub>) '+
+        'of the band has already gone to coating spread, it bites harder.'+
+        '<br><br><b>C (Taylor / ASME B1.2 placement)</b> sits the gauge basic size on the limit with the '+
+        'tolerance applied unilaterally inward, so the widest window the pair passes is exactly the legal '+
+        'band. It cannot pass a bad thread, at the cost of shop window and a gauge tolerance no table '+
+        'covers — and its GO gauge has no built-in wear allowance, so the wear limit must be stated on '+
+        'the gauge drawing.'+
+        '<br><br><b>Rounding matters when you quote these.</b> A GO nominal must be rounded <i>up</i> and '+
+        'a NOT GO nominal <i>down</i>, or the rounding itself opens an escape — at 3 decimal places that '+
+        'is worth up to half a micron. Set decimal places to 4 before transcribing to a gauge drawing.';
+    } else { $('tPlatG').innerHTML=''; $('platGNote').innerHTML=''; }
+    $('platSec').style.display='';
+  } else $('platSec').style.display='none';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   XLSX WRITER (store-only ZIP + CRC32, no libraries)
+   ══════════════════════════════════════════════════════════════════════════════ */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_TABLE[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+  const now=new Date();
+  const dt=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF;
+  const dd=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  files.forEach(f=>{
+    const name=enc.encode(f.name),data=enc.encode(f.data),crc=crc32(data);
+    const lh=new Uint8Array(30+name.length),dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0,true);dv.setUint16(8,0,true);
+    dv.setUint16(10,dt,true);dv.setUint16(12,dd,true);dv.setUint32(14,crc,true);
+    dv.setUint32(18,data.length,true);dv.setUint32(22,data.length,true);
+    dv.setUint16(26,name.length,true);dv.setUint16(28,0,true);lh.set(name,30);
+    parts.push(lh,data);
+    const ch=new Uint8Array(46+name.length),cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0,true);
+    cv.setUint16(10,0,true);cv.setUint16(12,dt,true);cv.setUint16(14,dd,true);cv.setUint32(16,crc,true);
+    cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);
+    cv.setUint16(30,0,true);cv.setUint16(32,0,true);cv.setUint16(34,0,true);cv.setUint16(36,0,true);
+    cv.setUint32(38,0,true);cv.setUint32(42,offset,true);ch.set(name,46);
+    central.push(ch); offset+=lh.length+data.length;
+  });
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array(22),ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(4,0,true);ev.setUint16(6,0,true);
+  ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true);ev.setUint32(16,offset,true);ev.setUint16(20,0,true);
+  const all=[...parts,...central,end],total=all.reduce((a,b)=>a+b.length,0);
+  const out=new Uint8Array(total);let p=0;all.forEach(b=>{out.set(b,p);p+=b.length;});
+  return new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xesc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+function colName(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26;}return s;}
+function sheetXml(rows,widths){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  if(widths&&widths.length){x+='<cols>';widths.forEach((w,i)=>{x+='<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>';});x+='</cols>';}
+  x+='<sheetData>';
+  rows.forEach((row,ri)=>{
+    x+='<row r="'+(ri+1)+'">';
+    row.forEach((cell,ci)=>{
+      if(cell===null||cell===undefined||cell==='')return;
+      let v=cell,s=0,fs=false;
+      if(typeof cell==='object'){v=cell.v;s=cell.s||0;fs=cell.t==='s';}
+      if(v===null||v===undefined||v==='')return;
+      const ref=colName(ci)+(ri+1), isNum=!fs&&typeof v==='number'&&isFinite(v);
+      x+= isNum ? '<c r="'+ref+'" s="'+s+'"><v>'+v+'</v></c>'
+                : '<c r="'+ref+'" s="'+s+'" t="inlineStr"><is><t xml:space="preserve">'+xesc(v)+'</t></is></c>';
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+const STYLES=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="4"><numFmt numFmtId="164" formatCode="0.000"/><numFmt numFmtId="165" formatCode="0.00000"/>
+<numFmt numFmtId="166" formatCode="0.0"/><numFmt numFmtId="167" formatCode="0"/></numFmts>
+<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="14"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF666666"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left/><right/><top/><bottom style="thin"><color rgb="FF9E9E9E"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="9">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+const S={txt:0,b:1,title:2,n3:3,n5:4,hdr:5,note:6,n0:7,n1:8};
+function buildXlsx(sheets){
+  const n=sheets.length;
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+   '<Default Extension="xml" ContentType="application/xml"/>'+
+   '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+   sheets.map((s,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+
+   '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+
+   sheets.map((s,i)=>'<sheet name="'+xesc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>';
+  const wbRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+
+   '<Relationship Id="rId'+(n+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const files=[{name:'[Content_Types].xml',data:ct},{name:'_rels/.rels',data:rels},
+    {name:'xl/workbook.xml',data:wb},{name:'xl/_rels/workbook.xml.rels',data:wbRels},
+    {name:'xl/styles.xml',data:STYLES}];
+  sheets.forEach((s,i)=>files.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:sheetXml(s.rows,s.widths)}));
+  return zipStore(files);
+}
+function saveBlob(blob,filename){
+  const msg=$('saveMsg');
+  try{
+    if(window.navigator&&window.navigator.msSaveOrOpenBlob){
+      window.navigator.msSaveOrOpenBlob(blob,filename);
+      msg.innerHTML='<span class="flag ok" style="display:block">Saved '+xesc(filename)+'</span>';return;
+    }
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{document.body.removeChild(a);}catch(e){}},1000);
+    setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){}},180000);
+    msg.innerHTML='<span class="flag ok" style="display:block">Saved <b>'+xesc(filename)+'</b> &nbsp;·&nbsp; '+
+      'if nothing downloaded, <a class="rescue" href="'+url+'" download="'+xesc(filename)+'">click here</a> (3 min).</span>';
+  }catch(e){ msg.innerHTML='<span class="flag err" style="display:block">Download failed: '+xesc(e.message)+'</span>'; }
+}
+
+function exportRows(r){
+  const dp=parseInt($('dp').value), NS=dp>=4?S.n5:S.n3, U=uName(), MU=microName();
+  const ext=r.ext,L=r.lim,mid=(a,b)=>(a==null||b==null)?null:(a+b)/2;
+  const H=v=>({v:v,s:S.hdr}), N=v=>(v==null?'—':{v:+(v*uf()).toFixed(7),s:NS}),
+        Nr=v=>(v==null?'—':{v:+v.toFixed(7),s:NS}), I=v=>(v==null?'—':{v:Math.round(v),s:S.n0});
+
+  const summary=[
+    [{v:'Thread — '+r.desig,s:S.title}],[],
+    [H('Input'),H('Value'),H('Unit')],
+    ['Designation',r.desig,''],
+    ['System',SYS==='iso'?'ISO metric M':'Unified inch UN',''],
+    ['Thread type',ext?'External':'Internal',''],
+    ['Basic major diameter',N(r.D),U],
+    [SYS==='iso'?'Pitch P':'Threads per inch', SYS==='iso'?N(r.P):{v:+(1/r.P).toFixed(4),s:S.n3},SYS==='iso'?U:'tpi'],
+    ['Number of starts',{v:r.starts,s:S.n0},''],
+    ['Lead',N(r.lead),U],
+    ['Direction',$('hand').value,''],
+    ['Tolerance class',r.clsStr,''],
+    SYS==='iso'?['Engagement group',r.eng.group,'']:['LE used',N(r.eng.len),U],
+    [],
+    [H('Result'),H('Max'),H('Mid'),H('Min'),H('Unit')],
+    ['Major diameter '+(ext?'d':'D'),N(L.majMax),N(mid(L.majMax,L.majMin)),N(L.majMin),U],
+    ['Pitch diameter '+(ext?'d2':'D2'),N(L.pdMax),N(mid(L.pdMax,L.pdMin)),N(L.pdMin),U],
+    ext?['Minor diameter d3 (single value, ISO 965-3)',N(L.minVal),'','',U]
+       :['Minor diameter D1',N(L.minMax),N(mid(L.minMax,L.minMin)),N(L.minMin),U],
+    [],
+    [{v:'Generated '+new Date().toLocaleString(),s:S.note}]
+  ];
+
+  const dia=[
+    [{v:'Diameter limits — '+r.desig,s:S.title}],[],
+    [H('Diameter'),H('Symbol'),H('Max'),H('Mid'),H('Min'),H('Tolerance ('+MU+')')],
+    ['Major diameter',ext?'d':'D',N(L.majMax),N(mid(L.majMax,L.majMin)),N(L.majMin),
+      ext?I(SYS==='iso'?r.Tcd:r.Tcd*1e6):'form limited'],
+    ['Pitch diameter',ext?'d2':'D2',N(L.pdMax),N(mid(L.pdMax,L.pdMin)),N(L.pdMin),
+      I(SYS==='iso'?r.Tpd:r.Tpd*1e6)],
+    ext?['Minor diameter','d3',N(L.minVal),'','','single value']
+       :['Minor diameter','D1',N(L.minMax),N(mid(L.minMax,L.minMin)),N(L.minMin),I(SYS==='iso'?r.Tcd:r.Tcd*1e6)],
+    [],
+    [H('Basic size'),H('Value ('+U+')')],
+    ['Basic major diameter',N(r.D)],
+    ['Basic pitch diameter = D − 0,649519·P',N(r.d2b)],
+    ['Basic minor diameter D1 = D − 1,082532·P',N(r.d1b)],
+    ['Basic minor diameter d3 = D − 1,226869·P',N(r.d3b)],
+    ['Fundamental triangle height H',N(r.H)],
+    []
+  ];
+  if(ext&&r.Cmax!=null){
+    dia.push([H('Root truncation — ISO 965-1 clause 11'),H('Value ('+U+')')]);
+    dia.push(['C max',N(r.Cmax)]);
+    dia.push(['C min = 0,125 P',N(r.Cmin)]);
+    dia.push([]);
+  }
+  dia.push([{v: ext
+    ? 'd3 is ONE value, not a max/min pair: ISO 965-3:1998 Table 1 gives the external minor diameter as deviation −(|es| + H/6) on an H/6 truncation basis, for stress calculation. The root is form-controlled (clause 11).'
+    : 'ISO 965-1 and ISO 965-3 both omit a maximum major diameter for internal threads — it is limited by root form (clause 11), not by a diameter tolerance.', s:S.note}]);
+
+  const insp=[
+    [{v:'Gauges & inspection — '+r.desig+(r.platGauge?'  (FINISHED / PLATED SIZE — pre-plate gauges are on the Pre-plating sheet)':''),s:S.title}],[],
+    [H('Property'),H('Value'),H('Unit')],
+    ['Fundamental triangle height H',N(r.H),U],
+    ['Thread height 5H/8',N(r.H*5/8),U],
+    ['Lead',N(r.lead),U],
+    ['Lead angle at pitch diameter',{v:+r.leadAngle.toFixed(4),s:S.n5},'deg'],
+    ['Root radius min = 0,125·P',N(r.Rmin),U],
+    ['Root radius preferred = H/6',N(r.Rpref),U],
+    ['Wire diameter used',N(r.wire),U],
+    ['Lead-angle correction',r.useCorr?'applied (Machinery\'s Handbook)':'not applied',''],
+    []
+  ];
+  if(r.ok){
+    const fn=ext?r.overWire:r.betwWire;
+    insp.push([H(ext?'Over 3 wires':'Between balls'),H('Value ('+U+')')]);
+    insp.push(['At pitch diameter max',N(fn(L.pdMax))]);
+    insp.push(['At pitch diameter min',N(fn(L.pdMin))]);
+    insp.push([]);
+  }
+  if(r.gauge){
+    const G=r.gauge,isRing=G.kind==='ring';
+    insp.push([H(isRing?'Screw RING gauges (external)':'Screw PLUG gauges (internal)'),H('High ('+U+')'),H('Low ('+U+')')]);
+    if(G.iso){
+      insp.push(['GO gauge pitch ø — full form',N(G.goHi),N(G.goLo)]);
+      insp.push(['GO zone centre',N(G.goCentre),'']);
+      insp.push(['NOT GO gauge pitch ø — truncated',N(G.ngHi),N(G.ngLo)]);
+      insp.push(['NOT GO zone centre',N(G.ngCentre),'']);
+      insp.push(['Workpiece limit represented',N(G.goPd),N(G.ngPd)]);
+      if(G.goWear!=null) insp.push(['GO wear limit (ISO 1502 T12 note 1)',N(G.goWear),'']);
+      if(G.ngWear!=null) insp.push(['NOT GO wear limit (ISO 1502 T12 note 2)',N(G.ngWear),'']);
+      if(G.goMaj!=null){
+        insp.push([]);
+        insp.push([H('Plug gauge crest / clearing ø — ISO 1502 Table 12'),H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO plug major ø (D + EI + Z_PL)',N(G.goMaj+G.majTol/2),N(G.goMaj-G.majTol/2)]);
+        insp.push(['NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)',N(G.ngMaj+G.majTol/2),N(G.ngMaj-G.majTol/2)]);
+        if(G.clearMax!=null) insp.push(['Clearing ø max (D1 + EI − H/6)',N(G.clearMax),'']);
+        insp.push(['F₁ = 0,1P (figures 7 & 8)',N(G.F1),'']);
+        insp.push(['Clearance groove b₁ max = P/8 · radius r₁ max = 0,072P',N(G.b1max),N(G.r1max)]);
+      }
+    } else if(G.b12){
+      insp.push(['GO gauge pitch ø — full form (B1.2 T4)',N(G.goHi),N(G.goLo)]);
+      insp.push(['NOT GO gauge pitch ø — truncated (B1.2 T4)',N(G.ngHi),N(G.ngLo)]);
+      insp.push(['Workpiece limit represented',N(G.goPd),N(G.ngPd)]);
+      insp.push([]);
+      insp.push([H('ASME B1.2 Table 6 — class X gage tolerances'),H('Value ('+U+')')]);
+      insp.push(['Pitch ø tolerance',N(G.xPd)]);
+      insp.push(['Major / minor ø tolerance',N(G.xMajMin)]);
+      insp.push(['Lead tolerance',N(G.xLead)]);
+      insp.push(['Half-angle tolerance (min)',G.xHalfAngle]);
+      if(G.w){
+        insp.push([]);
+        insp.push([H('ASME B1.2 Table 7 — class W (thread-SETTING gauges only)'),H('Value ('+U+')')]);
+        insp.push(['Pitch ø tolerance',N(G.w.pd)]);
+        insp.push(['Major / minor ø tolerance',N(G.w.majMin)]);
+        insp.push(['Lead tolerance',N(G.w.lead)]);
+        insp.push(['Half-angle tolerance (min)',G.w.halfAngleMin]);
+      }
+      if(G.plainGoHi!=null){
+        insp.push([]);
+        insp.push([H('Plain '+(isRing?'ring/snap (major ø)':'plug (minor ø)')+' — B1.2 T4 + T8 class '+G.plainCls),
+                   H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO plain gauge',N(G.plainGoHi),N(G.plainGoLo)]);
+        insp.push(['NOT GO plain gauge',N(G.plainNgHi),N(G.plainNgLo)]);
+        insp.push(['Plain gauge tolerance (Table 8)',N(G.plainTolB12),'']);
+      }
+      insp.push([]);
+      insp.push([H('ISO 1502 Table 4 (workpiece PD tol = '+r.Tpd+' µm)'),H('Value (µm)')]);
+      insp.push(['T_R  tolerance, screw ring gauges',{v:G.TR,s:S.n1}]);
+      insp.push(['T_PL tolerance, screw plug gauges',{v:G.TPL,s:S.n1}]);
+      insp.push(['T_CP tolerance, check / wear-check plugs',{v:G.TCP,s:S.n1}]);
+      insp.push(['m    ring gauge to GO check plug',{v:G.mVal,s:S.n1}]);
+      insp.push(['Z_R  GO ring zone offset from workpiece upper limit',{v:G.ZR,s:S.n1}]);
+      insp.push(['Z_PL GO plug zone offset from workpiece lower limit',{v:G.ZPL,s:S.n1}]);
+      if(G.wGO!=null){
+        insp.push([]);
+        insp.push([H('ISO 1502 Table 5 — permissible wear on pitch ø'),H('Value (µm)')]);
+        insp.push(['GO gauge',{v:G.wGO,s:S.n1}]);
+        insp.push(['NOT GO gauge',{v:G.wNG,s:S.n1}]);
+      }
+      if(G.flank){
+        insp.push([]);
+        insp.push([H('ISO 1502 Table 6 — tolerance on each flank angle'),H('Value (minutes)')]);
+        insp.push(['T_a1/2 (figures 5 and 6)',{v:G.flank[0],s:S.n1}]);
+        insp.push(['T_a2/2 (figures 7 and 8)',{v:G.flank[1],s:S.n1}]);
+      }
+      insp.push([]);
+      insp.push([H('ISO 1502 Table 7 — pitch tolerance T_p'),H('Value (µm)')]);
+      insp.push(['Gauge thread length <= 32 mm',{v:5,s:S.n1}]);
+      insp.push(['Gauge thread length > 32 to 50 mm',{v:6,s:S.n1}]);
+      insp.push(['Gauge thread length > 50 to 80 mm',{v:7,s:S.n1}]);
+      if(G.plainTol!=null){
+        insp.push([]);
+        insp.push([H('ISO 1502 Table '+(ext?'8':'9')+' — plain GO gauge, '+(ext?'major':'minor')+' ø'),
+                   H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['Plain GO gauge size',N(G.plainHi),N(G.plainLo)]);
+        insp.push([(ext?'H2/2':'H1/2')+' tolerance (µm)',{v:G.plainTol,s:S.n1},'']);
+        insp.push([(ext?'Z2':'Z1')+' offset (µm)',{v:G.plainZ,s:S.n1},'']);
+        if(ext) insp.push(['Hp/2 check plug tolerance (µm)',{v:G.plainCheck,s:S.n1},'']);
+      }
+    } else {
+      insp.push(['GO gauge — full form, at maximum-material limit',N(G.goPd),'']);
+      insp.push(['NOT GO gauge — truncated, at least-material limit',N(G.ngPd),'']);
+      insp.push(['Plain GO '+(isRing?'(major ø)':'(minor ø)'),N(G.goPlain),'']);
+      insp.push(['Plain NOT GO',N(G.ngPlain),'']);
+    }
+    if(G.tolManual!=null) insp.push(['Gauge PD tolerance (manual override)',N(G.tolManual),'']);
+    if(G.wearManual!=null) insp.push(['Wear allowance (manual override)',N(G.wearManual),'']);
+    insp.push([]);
+  }
+  insp.push([{v:'Gauge data from ISO 1502:1996 Tables 4-9 (metric threads only). GO zone placement uses the standard\'s symbol definitions for Z_PL and Z_R with the sign fixed by Table 4 note 1. The NOT GO zone placement is ASSUMED (no Z offset is defined for NOT GO gauges) and needs clause 13 / Table 10 to confirm.',s:S.note}]);
+  insp.push([{v:'Wire measurement M = d2 + W(1+cosec a) - (P/2)cot a = d2 + 3W - H for a=30deg. Optional lead-angle term +0,75*W*tan^2(lambda) is the Machinery\'s Handbook form and is NOT traceable to a primary standard here.',s:S.note}]);
+
+  const sheets=[{name:'Summary',rows:summary,widths:[44,16,14,14,12]},
+                {name:'Diameters',rows:dia,widths:[46,12,14,14,14,18]},
+                {name:'Gauges & inspection',rows:insp,widths:[48,18,10]}];
+
+  if(r.tap){
+    const T=r.tap;
+    const tap=[
+      [{v:'Tapping drill — '+r.desig,s:S.title}],[],
+      [H('Item'),H('Hole ø ('+U+')'),H('% of thread')],
+      ['Target',N(T.hole),{v:+T.pct.toFixed(1),s:S.n1}],
+      T.nearest?['Nearest drill: '+T.nearest[0],Nr(T.nearest[1]),{v:+T.nearestPct.toFixed(1),s:S.n1}]
+               :[T.above?('Nearest drill: none - target is above the largest tabulated drill ('
+                          +Nr(T.rangeHi).v+(T.drillSet==='metric'?' mm':' in')+'); bore to size')
+                        :('Nearest drill: none - target is below the smallest tabulated drill ('
+                          +Nr(T.rangeLo).v+(T.drillSet==='metric'?' mm':' in')+')')],
+      T.under?['Largest drill <= target: '+T.under[0],Nr(T.under[1]),{v:+T.underPct.toFixed(1),s:S.n1}]:[],
+      [],
+      [H('Class limits the finished hole must respect'),H('Hole ø ('+U+')'),H('% of thread')],
+      ['D1 min (maximum material)',N(T.holeForD1min),{v:+T.pctAtD1min.toFixed(1),s:S.n1}],
+      ['D1 max (least material)',N(T.holeForD1max),{v:+T.pctAtD1max.toFixed(1),s:S.n1}],
+      [],
+      [{v:'Convention: 100% of thread = 0,75H, hole = D - (%/100) x 1,299038 x P. Source FED-STD-H28/2B Table II.A.1 note 1; reproduces that standard\'s own percent columns.',s:S.note}],
+      [{v:'Drill sizes listed are NOMINAL. Real drills cut oversize (H28 tabulates probable oversize ~0,0015-0,0026 in on small sizes), so verify the finished hole against the D1 limits.',s:S.note}]
+    ];
+    sheets.push({name:'Tapping drill',rows:tap,widths:[46,18,14]});
+  }
+
+  if(r.plat){
+    const p=r.plat,after=p.mode==='after';
+    const pl=[
+      [{v:(after?'Pre-plating limits — ':'As-plated sizes — ')+r.desig,s:S.title}],[],
+      [H('Setting'),H('Value'),H('Unit')],
+      ['Mode',after?'Class applies AFTER plating':'Class applies BEFORE plating (ISO 965-1 default)',''],
+      ['Coating thickness min',{v:+(p.tmin*p.u).toFixed(2),s:S.n3},MU],
+      ['Coating thickness max',{v:+(p.tmax*p.u).toFixed(2),s:S.n3},MU],
+      ['Pitch ø change (4t)',(4*p.tmin*p.u).toFixed(0)+' – '+(4*p.tmax*p.u).toFixed(0),MU],
+      ['Crest ø change (2t)',(2*p.tmin*p.u).toFixed(0)+' – '+(2*p.tmax*p.u).toFixed(0),MU],
+      [],
+      [H('Diameter'),H(after?'Pre-plate max':'As-plated max'),H(after?'Pre-plate min':'As-plated min'),H('Band')],
+      ['Pitch diameter',N(p.pdMax),N(p.pdMin),N(p.pdMax-p.pdMin)],
+      ['Crest diameter',N(p.cdMax),N(p.cdMin),N(p.cdMax-p.cdMin)],
+      [],
+      [H('Finished (specified) limits'),H('Max'),H('Min')],
+      ['Pitch diameter',N(L.pdMax),N(L.pdMin)],
+      ['Crest diameter',N(ext?L.majMax:L.minMax),N(ext?L.majMin:L.minMin)],
+      []
+    ];
+    if(after) pl.push(['Band lost to plating spread',{v:+(p.shrink4*p.u).toFixed(1),s:S.n3},MU]);
+    if(r.platGauge){
+      const PG=r.platGauge, isRingP=PG.kind==='ring';
+      pl.push([]);
+      const MODEX = PG.taylor ? 'C - Taylor, tolerance unilateral into the band'
+                  : PG.b12    ? 'ASME B1.2 class X (inch - unilateral into band)'
+                  : PG.iso    ? 'A - ISO 1502, indexed on the declared class tolerance'
+                  : '-';
+      pl.push([H((after?'PRE-PLATING':'AS-PLATED')+' GAUGE PITCH DIAMETERS — '+(isRingP?'screw ring':'screw plug')),H('Max'),H('Min')]);
+      pl.push(['Convention',MODEX,'']);
+      pl.push(['GO gauge pitch diameter (full form)',N(PG.goHi),N(PG.goLo)]);
+      pl.push(['NOT GO gauge pitch diameter (truncated)',N(PG.ngHi),N(PG.ngLo)]);
+      pl.push([(after?'Pre-plate':'As-plated')+' limit represented (GO col / NOT GO col — not max|min)',N(PG.goPd),N(PG.ngPd)]);
+      if(PG.TdispUm!=null) pl.push(['Gauge tolerance',{v:+PG.TdispUm.toFixed(1),s:S.n1},MU]);
+      if(PG.iso){
+        pl.push(['GO zone centre',N(PG.goCentre)]);
+        pl.push(['NOT GO zone centre',N(PG.ngCentre)]);
+        pl.push(['ISO 1502 Table 4 lookup value',{v:+PG.idxUm.toFixed(1),s:S.n3},MU]);
+        pl.push(['  basis for that lookup',PG.idxBasis,'']);
+        pl.push(['  row used','<= '+PG.idxRow+' um','']);
+        pl.push(['Z_R / Z_PL for that row',PG.ZR+' / '+PG.ZPL,MU]);
+      } else if(PG.b12){
+        pl.push(['ASME B1.2 class X gage tolerance on pitch ø',N(PG.xPd)]);
+        pl.push(['Note','Indexed by tpi and diameter — unchanged by the plating band','']);
+      }
+      pl.push([]);
+      pl.push([H('WHAT THIS GAUGE PAIR ACTUALLY ACCEPTS'),H('Value'),H('Unit')]);
+      pl.push(['Legal pre-plate band',{v:+(PG.legalBand*p.u).toFixed(1),s:S.n1},MU]);
+      pl.push(['GO can accept past the maximum-material limit',{v:+(PG.goEsc*p.u).toFixed(1),s:S.n1},MU]);
+      pl.push(['NOT GO can accept past the least-material limit',{v:+(PG.ngEsc*p.u).toFixed(1),s:S.n1},MU]);
+      pl.push(['Widest window the pair passes',{v:+(PG.widest*p.u).toFixed(1),s:S.n1},MU]);
+      pl.push(['Narrowest window the shop must hold',{v:+(PG.shop*p.u).toFixed(1),s:S.n1},MU]);
+      pl.push([]);
+      if(PG.wearIsLimit){
+        pl.push(['GO wear limit (set by us — the product limit itself)',N(PG.goWear)]);
+        pl.push(['Note','No tabulated wear allowance exists for this convention; state the wear limit on the gauge drawing','']);
+      } else if(PG.goWear!=null){
+        pl.push(['GO wear limit (ISO 1502 Table 5, W = '+PG.wGO+' um)',N(PG.goWear)]);
+        pl.push(['  worn GO accepts past the limit',{v:+((PG.goWearEsc||0)*p.u).toFixed(1),s:S.n1},MU]);
+        pl.push(['NOT GO wear limit (W = '+PG.wNG+' um) — wears toward over-rejection',N(PG.ngWear)]);
+      }
+      pl.push([]);
+      pl.push([{v:'SOURCE STATUS — DERIVED, NOT TABULATED. Neither ISO 1502 nor ASME B1.2 covers gauging a '+
+        'thread that will later be coated, and ISO 965-1 clause 12 defines the pre-plate band but not gauges '+
+        'for it. Each convention applies a sourced placement rule (ISO 1502 Tables 4/10/12; ASME B1.2 Table 4) '+
+        'to a band the standard never contemplated. The placement is standard; the band is an engineering '+
+        'choice. A follows ISO 1502 placement and can pass threads beyond the limits by design — ISO '+
+        'favours not falsely rejecting good parts and spends tolerance on gauge life; see the acceptance audit '+
+        'above. C sits the gauge on the limit with the tolerance applied inward and passes exactly the legal '+
+        'band, at the cost of shop window and with no built-in wear allowance. Round a GO nominal UP and a '+
+        'NOT GO nominal DOWN when transcribing to a gauge drawing.',s:S.note}]);
+    }
+    if(r.flags.length){ pl.push([]); pl.push([H('Checks')]);
+      r.flags.forEach(fl=>pl.push([{v:fl.t.toUpperCase()+': '+fl.m.replace(/<[^>]+>/g,''),s:S.note}])); }
+    sheets.push({name:'Pre-plating',rows:pl,widths:[46,18,18,14]});
+  }
+
+  const ref=[
+    [{v:'Data sources and verification status',s:S.title}],[],
+    [H('Item'),H('Value'),H('Source / status')],
+    ['System',SYS==='iso'?'ISO metric M':'Unified inch UN',''],
+    ['Pitch ø tolerance',(SYS==='iso'?(r.Tpd==null?'—':r.Tpd+' µm'):(r.Tpd*1e6).toFixed(0)+' µin'),r.TpdSrc],
+    ['Crest ø tolerance',(SYS==='iso'?(r.Tcd==null?'—':r.Tcd+' µm'):(r.Tcd*1e6).toFixed(0)+' µin'),r.TcdSrc],
+    [],
+    [H('Verification')],
+    [{v:'VERIFIED - ISO 965-1:1998 Tables 1-6 transcribed verbatim from the standard.',s:S.note}],
+    [{v:'VERIFIED - ISO 965-3:1998 Table 1: external minor diameter = one value, -(|es| + H/6), for stress calculation.',s:S.note}],
+    [{v:'VERIFIED - ISO 965-1 and ISO 965-3 both omit a maximum major diameter for internal threads.',s:S.note}],
+    [{v:'VERIFIED - FED-STD-H28/2B Table II.A.1: 100% of thread = 0,75H. UN internal minor D1min = D - 1,082532p.',s:S.note}],
+    [{v:'VERIFIED - UN internal minor o MAXIMUM is read from FED-STD-H28/2B Table II.A.3 (classes 1B, 2B) and Table II.A.4 (class 3B): 41 paired sizes #0-80 to 7/16-32, plus 174 class-3B sizes 1/2 to 3 1/4 in. Every 3B row was cross-checked against the standard own percent-of-thread columns (100% = 0,75H) - 174 rows, 0 failures.',s:S.note}],
+    [{v:'The formula 0,25p - 0,4p^2 is used ONLY for classes 1B/2B above No. 10, where it is exact - checked against Table II.A.3 on 120 sizes from No. 10 to 3 1/4 in, every row inside the +/-0,0005 print rounding. It is never used for class 3B, which it over-reads by up to 0,0105 in (0,27 mm) at 1 3/8-6 UNC.',s:S.note}],
+    [{v:'CHECKED - UN tolerance formulae (ASME B1.1 sec.5, cited by H28/2B 5.2.2) reproduce published limits for 1/4-20, 3/8-16, 1/2-13, 3/4-10 and 1-8 UNC: 39 of 40 values exact.',s:S.note}],
+    [{v:'VERIFIED - ISO 1502:1996 Tables 4-9 transcribed: gauge tolerances T_R/T_PL/T_CP, values m/Z_R/Z_PL, permissible wear, flank-angle and pitch tolerances, and plain-gauge tolerances.',s:S.note}],
+    [{v:'DERIVED - GO gauge zone placement, from the ISO 1502 symbol definitions of Z_PL and Z_R plus the sign rule in Table 4 note 1.',s:S.note}],
+    [{v:'ASSUMED - NOT GO gauge zone placement (against the least-material limit, extending inward). No Z offset is defined for NOT GO gauges; needs ISO 1502 clause 13 / Table 10 to confirm.',s:S.note}],
+    [{v:'NOT VERIFIED - lead-angle correction term (Machinery\'s Handbook form). Off by default.',s:S.note}],
+    [{v:'NOT COVERED - Unified inch gauges (ASME B1.2). ISO 1502 data applies to metric threads only.',s:S.note}]
+  ];
+  sheets.push({name:'Sources',rows:ref,widths:[46,22,30]});
+  return sheets;
+}
+function fileBase(r){
+  const base = SYS==='iso' ? ('M'+fmtP(r.D)+'x'+fmtP(r.P)) : (fmtP(r.D)+'-'+fmtP(Math.round(1/r.P)));
+  return (base+'_'+r.clsStr+(r.ext?'_ext':'_int')).replace(/[^A-Za-z0-9_.-]/g,'');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   WIRING
+   ══════════════════════════════════════════════════════════════════════════════ */
+function fillSelect(sel,vals,def){
+  sel.innerHTML=vals.map(v=>'<option'+(String(v)===String(def)?' selected':'')+'>'+v+'</option>').join('');
+}
+function refreshClassOptions(){
+  const ext=$('ttype').value==='ext';
+  if(SYS==='iso'){
+    const pdG=$('pdGrade').value,cdG=$('cdGrade').value,pdP=$('pdPos').value,cdP=$('cdPos').value;
+    fillSelect($('pdGrade'), ext?[3,4,5,6,7,8,9]:[4,5,6,7,8], pdG||6);
+    fillSelect($('cdGrade'), ext?[4,6,8]:[4,5,6,7,8], cdG||6);
+    fillSelect($('pdPos'), ext?['e','f','g','h']:['G','H'], ext?(['e','f','g','h'].includes(pdP)?pdP:'g'):(['G','H'].includes(pdP)?pdP:'H'));
+    fillSelect($('cdPos'), ext?['e','f','g','h']:['G','H'], ext?(['e','f','g','h'].includes(cdP)?cdP:'g'):(['G','H'].includes(cdP)?cdP:'H'));
+  } else {
+    const cur=$('unClass').value;
+    const opts = ext?['1A','2A','3A']:['1B','2B','3B'];
+    fillSelect($('unClass'), opts, opts.includes(cur)?cur:(ext?'2A':'2B'));
+  }
+}
+function refreshPresets(){
+  if(SYS==='iso'){
+    $('preset').innerHTML='<option value="">— custom —</option>'+PRESETS.map(([d,p])=>
+      '<option value="'+d+','+p+'">M'+fmtP(d)+' × '+fmtP(p)+(COARSE[d]===p?'  (coarse)':'')+'</option>').join('');
+  } else {
+    $('preset').innerHTML='<option value="">— custom —</option>'+UN_SIZES.map(([n,d,t])=>
+      '<option value="'+d+','+t+'">'+n+'</option>').join('');
+  }
+}
+function syncSystem(){
+  const iso=SYS==='iso';
+  $('isoCls').style.display=iso?'':'none';
+  $('unCls').style.display=iso?'none':'';
+  $('lblDnom').textContent='Basic major diameter D, d ('+(iso?'mm':'in')+')';
+  $('lblPitch').textContent=iso?'Pitch P (mm)':'Threads per inch (tpi)';
+  $('lblEngMan').textContent='Engagement length ('+(iso?'mm':'in')+')';
+  $('lblWire').textContent='Wire diameter ('+$('dunit').value+')';
+  $('dunit').value = iso?'mm':'in';
+  $('drillSet').value = iso?'metric':'inch';
+  $('sysHint').innerHTML = iso
+    ? 'Presets: ISO 261 coarse + ISO 262 fine. Tolerances from ISO 965-1:1998 Tables 1–6 (verbatim).'
+    : 'Presets: UNC / UNF / UNEF. Tolerances from the ASME B1.1 §5 formulae, checked against published limits.';
+  $('clsHint').innerHTML = iso
+    ? 'Crest ø = major ø for external, minor ø for internal. Equal grade/position pairs collapse the designation (e.g. 6H, 6g).'
+    : 'Classes 1A/2A/3A are external, 1B/2B/3B internal. 1A and 2A carry an allowance of 0,3 × the class-2A pitch-ø tolerance; 3A has none.';
+  refreshPresets(); refreshClassOptions();
+}
+function syncPlat(){ $('platInputs').classList.toggle('na',$('platMode').value==='off'); }
+function syncEng(){ $('engManWrap').classList.toggle('na',$('engMode').value!=='man'); }
+function syncWire(){ $('wireManWrap').classList.toggle('na',$('wireMode').value!=='man'); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   HISTORY — every thread computed on this machine (Emil, 26.08.2026)
+   "A history of the threads that I have computed ... I can just load the values."
+
+   Ported from the spline/gear DXF generator's section 09 so the two tools behave the
+   same way, because they are used by the same person on the same afternoon.  Same
+   guarantees: an entry stores the COMPLETE input set, LOAD reproduces it exactly,
+   regenerating the same thread updates the entry instead of adding a duplicate, and
+   nothing leaves this machine unless it is exported by hand.
+
+   FIELD_IDS IS THE SINGLE SOURCE OF TRUTH for "the complete input set" — add a control
+   to the tool and it lands in the log automatically, with no second list to forget.
+   ⚠ IF YOU ADD A FORM CONTROL, ADD ITS id HERE.  A field missing from this list is a
+   field the log silently drops, and the failure is invisible until someone loads an old
+   entry and gets a different answer.
+
+   _sys IS NOT A FORM CONTROL.  The ISO/UN choice lives in the JS variable SYS driven by
+   the tab strip, so it is captured and restored explicitly.  Without it, loading an inch
+   thread into an ISO session would recompute the wrong standard against the right numbers
+   — the worst kind of failure, because every field would look correct.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const FIELD_IDS=['preset','dnom','pitch','ttype','starts','hand','dunit','dp',
+                 'pdGrade','pdPos','cdGrade','cdPos','unClass','unForm',
+                 'engMode','engMan','platMode','tmin','tmax',
+                 'pctThread','drillSet','leadCorr','wireMode','wireMan',
+                 'gTol','gWear','pgMode','pgTol'];
+
+/* Excluded from the FINGERPRINT only — never from the restore set.  Decimal places and
+   display unit change how a number is PRINTED, not one computed limit, so treating them
+   as part of the thread's identity would file the same thread twice for having been read
+   at 3 dp and at 4 dp.  They are still stored and still restored, so LOAD reproduces the
+   view exactly.  (Deviation from the generator, which fingerprints on all of FIELD_IDS —
+   it has no display-only fields for this to matter to.) */
+const PRINT_SKIP=['dp','dunit'];
+
+const HIST_KEY='threadCalcV3_history';
+const HIST_MAX=250;                       /* oldest dropped past this — a log, not an archive */
+
+function histMsg(html,cls){ $('histMsg').innerHTML='<span class="flag '+cls+'" style="display:block">'+html+'</span>'; }
+function histLoad(){
+  try{ const h=JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); return Array.isArray(h)?h:[]; }
+  catch(e){ return []; }
+}
+function histStore(list){
+  try{ localStorage.setItem(HIST_KEY,JSON.stringify(list.slice(0,HIST_MAX))); return true; }
+  catch(e){ histMsg('History could not be saved — browser storage is full or unavailable. '+
+                    'Export to .json and clear some entries.','err'); return false; }
+}
+function histFields(){
+  const f={};
+  FIELD_IDS.forEach(id=>{ const el=$(id); if(el) f[id]=el.value; });
+  f._sys=SYS;
+  return f;
+}
+function histPrint(f){                    /* value fingerprint — stable key order */
+  return FIELD_IDS.filter(id=>PRINT_SKIP.indexOf(id)<0)
+                  .map(id=>id+'='+(f[id]===undefined?'':f[id])).join('|')
+       + '|_sys='+(f._sys===undefined?'':f._sys);
+}
+/* One-line human summary, so the list reads without loading anything. */
+function histSummary(f){
+  const iso=(f._sys||'iso')==='iso', ext=f.ttype==='ext';
+  const size=iso ? 'M'+(f.dnom||'?')+'×'+(f.pitch||'?')
+                 : (f.dnom||'?')+'-'+(f.pitch||'?')+' '+(f.unForm||'UN');
+  const cls=iso ? ((f.pdGrade||'')+(f.pdPos||'')+
+                   ((f.pdGrade===f.cdGrade&&f.pdPos===f.cdPos)?'':' '+(f.cdGrade||'')+(f.cdPos||'')))
+                : (f.unClass||'');
+  const starts=(f.starts&&f.starts!=='1')?' · '+f.starts+' starts':'';
+  const lh=(f.hand==='LH')?' · LH':'';
+  let coat='', gauge='';
+  if(f.platMode&&f.platMode!=='off'){
+    coat=' · COAT '+(f.tmin||'?')+'–'+(f.tmax||'?')+' µm '+(f.platMode==='after'?'(class after)':'(class before)');
+    gauge=' · GAUGE '+(f.pgMode==='taylor'?('C @ '+(f.pgTol||'?')+' µm'):'A (ISO 1502)');
+  }
+  return (iso?'ISO M':'UN inch')+' · '+(ext?'ext':'int')+' · '+size+' - '+cls+starts+lh+coat+gauge;
+}
+
+/* kind: what produced the entry ('calc', 'xlsx', 'csv', 'manual').
+   announce=true reports to the history message line (manual saves); automatic logging
+   stays quiet so it never talks over the Saved / download message. */
+function histRecord(kind,announce){
+  const r=LAST;
+  if(!r||r.err||!r.ok){
+    if(announce) histMsg('Nothing to log — resolve the errors first.','err');
+    return;
+  }
+  const f=histFields(), print=histPrint(f), list=histLoad(), now=new Date().toISOString();
+  syncHistName();
+  const note=($('histNote').value||'').trim();
+  const hit=list.find(e=>e.print===print);
+  if(hit){
+    hit.ts=now;
+    if(kind&&hit.kinds.indexOf(kind)<0) hit.kinds.push(kind);
+    hit.desig=r.desig;                    /* keep the label current with the engine */
+    if(note) hit.note=note;               /* a later note wins; never blanked by an empty box */
+    list.splice(list.indexOf(hit),1); list.unshift(hit);          /* bump to the top */
+  } else {
+    list.unshift({id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+                  ts:now,created:now,desig:r.desig,note:note,kinds:kind?[kind]:[],
+                  version:($('badge')||{}).textContent||'',print:print,fields:f});
+  }
+  if(!histStore(list)) return;
+  histRender();
+  if(announce) histMsg('Saved to history — <b>'+xesc(r.desig)+'</b>','ok');
+}
+function syncHistName(){
+  const el=$('histName'); if(!el) return;
+  el.value=(LAST&&!LAST.err&&LAST.desig)?LAST.desig:'';
+}
+function histRender(){
+  const box=$('histList'); if(!box) return;
+  const list=histLoad();
+  if(!list.length){ box.innerHTML='<div class="hist-empty">NO THREADS LOGGED YET — PRESS COMPUTE, '+
+    'EXPORT A SPREADSHEET, OR PRESS SAVE CURRENT VALUES</div>'; return; }
+  const kindLab={calc:'COMPUTED',xlsx:'EXCEL',csv:'CSV',manual:'SAVED'};
+  box.innerHTML=list.map(e=>{
+    const d=new Date(e.ts);
+    const when=isNaN(d)?'':d.toLocaleDateString('en-GB')+' '+
+               d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const kinds=(e.kinds||[]).map(k=>kindLab[k]||k).join(' · ');
+    return '<div class="hist-row">'+
+      '<div style="min-width:0">'+
+        '<div class="hist-desig">'+xesc(e.desig||histSummary(e.fields||{}))+
+          (e.note?' <span class="hist-note">— '+xesc(e.note)+'</span>':'')+'</div>'+
+        '<div class="hist-meta">'+xesc(when)+' · '+xesc(histSummary(e.fields||{}))+
+          (kinds?' · <span class="hist-kinds">'+xesc(kinds)+'</span>':'')+'</div>'+
+      '</div>'+
+      '<div class="hist-btns">'+
+        '<button class="alt" data-hload="'+e.id+'" title="Put these values back into the form">Load</button>'+
+        '<button data-hdel="'+e.id+'" title="Remove this entry" style="background:#3a2230;border-color:#6b3346;color:#ffc3d0">✕</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+/* RESTORE ORDER MATTERS AND IS NOT OBVIOUS — do not reorder without reading this.
+   1. SYS and the tab strip first, then ttype, THEN syncSystem().  refreshClassOptions()
+      rebuilds the grade/position/class selects from SYS + ttype, so assigning pdGrade='4'
+      before those options exist would silently leave the select on its old value.
+   2. Field values AFTER syncSystem(), never before: syncSystem() overwrites dunit and
+      drillSet from SYS, so a value restored ahead of it is thrown away.
+   3. The sync* helpers and render() last, so every greyed-out state matches the values. */
+function histRestore(id){
+  const e=histLoad().find(x=>x.id===id);
+  if(!e||!e.fields){ histMsg('History entry not found.','err'); return; }
+  const f=e.fields;
+
+  SYS=(f._sys==='un')?'un':'iso';
+  [...$('sysTabs').children].forEach(b=>b.classList.toggle('on',b.dataset.sys===SYS));
+  if(f.ttype) $('ttype').value=f.ttype;
+  syncSystem();
+
+  FIELD_IDS.forEach(k=>{ const el=$(k); if(el&&f[k]!==undefined&&f[k]!==null) el.value=f[k]; });
+
+  $('histNote').value=e.note||'';
+  $('lblWire').textContent='Wire diameter ('+$('dunit').value+')';
+  syncPlat(); syncEng(); syncWire();
+  render(); syncHistName();
+  histMsg('Loaded — <b>'+xesc(e.desig||histSummary(f))+'</b>'+(e.note?' — '+xesc(e.note):''),'ok');
+}
+function histDelete(id){
+  const list=histLoad().filter(x=>x.id!==id);
+  if(histStore(list)){ histRender(); histMsg('Entry deleted.','info'); }
+}
+function histExport(){
+  const list=histLoad();
+  if(!list.length){ histMsg('Nothing to export — the history is empty.','err'); return; }
+  const fname='thread_calculator_history_'+new Date().toISOString().slice(0,10)+'.json';
+  saveBlob(new Blob([JSON.stringify({tool:'thread_calculator_v3',
+                                     version:($('badge')||{}).textContent||'',
+                                     exported:new Date().toISOString(),
+                                     count:list.length,entries:list},null,2)],
+                    {type:'application/json'}), fname);
+  histMsg('Exported '+list.length+' entr'+(list.length===1?'y':'ies')+' → <b>'+xesc(fname)+'</b>','ok');
+}
+/* MERGE, never replace: an import adds what is missing and leaves what is already here.
+   Same fingerprint = same thread, so re-importing your own export is a no-op. */
+function histImport(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const rdr=new FileReader();
+  rdr.onload=()=>{
+    try{
+      const data=JSON.parse(rdr.result);
+      const incoming=Array.isArray(data)?data:(data.entries||[]);
+      if(!Array.isArray(incoming)||!incoming.length) throw new Error('no entries found in that file');
+      const list=histLoad(); let added=0,merged=0;
+      incoming.forEach(e=>{
+        if(!e||!e.fields) return;
+        const print=e.print||histPrint(e.fields);
+        const hit=list.find(x=>x.print===print);
+        if(hit){
+          (e.kinds||[]).forEach(k=>{ if(hit.kinds.indexOf(k)<0) hit.kinds.push(k); });
+          if(!hit.note&&e.note) hit.note=e.note;
+          if(!hit.desig&&e.desig) hit.desig=e.desig;
+          if((e.ts||'')>(hit.ts||'')) hit.ts=e.ts;
+          merged++;
+        } else {
+          list.push(Object.assign({},e,{print:print,
+            id:e.id||'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}));
+          added++;
+        }
+      });
+      list.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+      if(histStore(list)){ histRender();
+        histMsg('Imported — '+added+' new, '+merged+' already here ('+list.length+' total).','ok'); }
+    }catch(err){ histMsg('Import failed: '+xesc(err.message),'err'); }
+    input.value='';                        /* allow re-importing the same file */
+  };
+  rdr.onerror=()=>{ histMsg('Import failed: could not read the file.','err'); input.value=''; };
+  rdr.readAsText(file);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  syncSystem(); syncPlat(); syncEng(); syncWire();
+
+  $('sysTabs').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-sys]'); if(!b) return;
+    [...$('sysTabs').children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); SYS=b.dataset.sys;
+    if(SYS==='iso'){ $('dnom').value='14'; $('pitch').value='1'; }
+    else { $('dnom').value='0.25'; $('pitch').value='20'; }
+    syncSystem(); render();
+  });
+  $('preset').addEventListener('change',e=>{
+    if(!e.target.value) return;
+    const [d,p]=e.target.value.split(',');
+    $('dnom').value=d; $('pitch').value=p; render();
+  });
+  $('ttype').addEventListener('change',()=>{refreshClassOptions();render();});
+  ['dnom','pitch','starts','engMan','tmin','tmax','pctThread','wireMan','gTol','gWear','pgTol'].forEach(id=>
+    $(id).addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(render,220);}));
+  ['pdGrade','pdPos','cdGrade','cdPos','unClass','unForm','hand','dp','dunit','drillSet','leadCorr','pgMode'].forEach(id=>
+    $(id).addEventListener('change',render));
+  $('dunit').addEventListener('change',()=>{$('lblWire').textContent='Wire diameter ('+$('dunit').value+')';});
+  $('platMode').addEventListener('change',()=>{syncPlat();render();});
+  $('engMode').addEventListener('change',()=>{syncEng();render();});
+  $('wireMode').addEventListener('change',()=>{syncWire();render();});
+  /* Compute logs the thread. The button, NOT render() — render() fires on every
+     keystroke behind a 220 ms debounce, and hooking it would log a row for every
+     half-typed diameter on the way to the real one. Pressing Compute is the user
+     saying "this is the thread I want"; dedupe absorbs repeated presses. */
+  $('calc').addEventListener('click',()=>{ render(); histRecord('calc',false); });
+
+  $('xlsx').addEventListener('click',()=>{
+    const r=LAST||compute();
+    if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
+    saveBlob(buildXlsx(exportRows(r)), fileBase(r)+'.xlsx');
+    histRecord('xlsx',false);
+  });
+  $('csv').addEventListener('click',()=>{
+    const r=LAST||compute();
+    if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
+    const lines=[];
+    exportRows(r).forEach(sh=>{
+      lines.push('### '+sh.name);
+      sh.rows.forEach(row=>lines.push(row.map(c=>{
+        let v=(c&&typeof c==='object')?c.v:c; if(v==null)v=''; v=String(v);
+        return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+      }).join(',')));
+      lines.push('');
+    });
+    saveBlob(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}), fileBase(r)+'.csv');
+    histRecord('csv',false);
+  });
+
+  /* ── history controls ── */
+  $('histSave').addEventListener('click',()=>histRecord('manual',true));
+  $('histExp').addEventListener('click',histExport);
+  $('histImpBtn').addEventListener('click',()=>$('histFile').click());
+  $('histFile').addEventListener('change',function(){ histImport(this); });
+  $('histClear').addEventListener('click',()=>{
+    const n=histLoad().length;
+    if(!n){ histMsg('The history is already empty.','info'); return; }
+    if(!confirm('Delete all '+n+' history entries on this machine?\n\nThis cannot be undone. '+
+                'Export to .json first if you want to keep them.')) return;
+    if(histStore([])){ histRender(); histMsg('History cleared — '+n+' entr'+(n===1?'y':'ies')+' deleted.','info'); }
+  });
+  /* Delegated so the rows can be re-rendered without re-binding, and so no entry id
+     is ever interpolated into an inline handler. */
+  $('histList').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.hload) histRestore(b.dataset.hload);
+    else if(b.dataset.hdel) histDelete(b.dataset.hdel);
+  });
+
+  render(); syncHistName(); histRender();
+});
+</script>
+</body>
+</html>
