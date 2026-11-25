@@ -84,7 +84,7 @@ a.rescue{color:var(--accent);font-size:12px}
 <body>
 <header>
   <h1>Thread Calculator</h1>
-  <span class="badge" id="badge">v7</span>
+  <span class="badge" id="badge">v11</span>
   <span class="sub">ISO metric M &amp; Unified inch UN/UNR &middot; tolerances &middot; pre-plating &middot; pre-plate gauges &middot; tapping drills &middot; gauges &middot; history &middot; Excel</span>
 </header>
 
@@ -243,7 +243,7 @@ a.rescue{color:var(--accent);font-size:12px}
         <label id="lblWire">Wire diameter (mm)</label>
         <input id="wireMan" value="0.866">
       </div>
-      <div class="row">
+      <div class="row" id="gOvWrap">
         <div class="field">
           <label>Gauge PD tolerance (&micro;m/&micro;in)</label>
           <input id="gTol" value="">
@@ -253,7 +253,28 @@ a.rescue{color:var(--accent);font-size:12px}
           <input id="gWear" value="">
         </div>
       </div>
-      <div class="hint">Leave blank to use the ISO 1502 Tables 4–5 values automatically. Fill in only to override.</div>
+      <div class="hint">Overrides for the <b>ISO 1502</b> and <b>ASME B1.2</b> finished gauges in section 11
+        (v8: they now change the gauge sizes — in v7 they were only printed). Leave blank to use the
+        tabulated values. Greyed out under <b>Strict</b>, which takes its tolerance from the box below.</div>
+      <div class="row" id="fgWrap" style="margin-top:9px">
+        <div class="field">
+          <label for="fgMode">Finished-size gauge convention (ISO M)</label>
+          <select id="fgMode">
+            <option value="strict" selected>Strict — on the limit, tolerance into the band</option>
+            <option value="iso">ISO 1502 — standard placement</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fgTol">Gauge tolerance for Strict (µm)</label>
+          <input id="fgTol" type="number" step="0.1" min="0.1" value="8">
+        </div>
+      </div>
+      <div class="hint">Section 11. <b>Strict</b> (default, Emil 25.11.2026) puts every gauge ON its
+        workpiece limit with the gauge tolerance applied inward, so a new gauge cannot pass a bad
+        thread at either end. <b>ISO 1502</b> places the NOT GO wholly <i>outside</i> the band (a new
+        NOT GO can pass a thread T<sub>PL</sub>/T<sub>R</sub> over the limit) and lets the GO wear
+        past the limit (Table 5). Unified inch threads always use ASME B1.2 Table 4, which is
+        already unilateral inward.</div>
     </div>
   </section>
 
@@ -265,6 +286,19 @@ a.rescue{color:var(--accent);font-size:12px}
         <button class="alt" id="xlsx">Download Excel (.xlsx)</button>
         <button class="alt" id="csv">CSV</button>
       </div>
+      <div class="btns" style="margin-top:9px">
+        <button class="alt" id="csvThread">CSV — thread</button>
+        <button class="alt" id="csvGauge">CSV — gauges, finished</button>
+        <button class="alt" id="csvGaugePre">CSV — gauges, pre-plate</button>
+      </div>
+      <div class="hint">Short tables for a <b>Creo</b> drawing (Emil, 25.11.2026): designation, pitch,
+        class and tolerances, the major / pitch / minor ø limits and, when plated, the coating range and
+        the pre-plate limits. Plain ASCII (ø → dia, µm → um), comma-separated, decimal point, no BOM,
+        and <b>every row has the same number of columns</b> — Creo rejects a file whose rows differ
+        (v9 fix, 25.11.2026).
+        Finished thread limits are rounded to the nearest at the Decimals setting, as ISO prints them;
+        pre-plate thread limits and every gauge limit are rounded <b>into</b> their band (a max down,
+        a min up), gauges at 4 decimals or more (5 for inch).</div>
       <div id="saveMsg" style="margin-top:9px"></div>
     </div>
   </section>
@@ -993,6 +1027,15 @@ function compute(){
     }
   } else {
     unCls=$('unClass').value;
+    /* v8 — W7 (27.08.2026): a blank or unknown class used to flow through UN_PD_F[undefined]
+       into NaN limits that still reported ok.  Refuse it here, by name.                  */
+    if(!(unCls in UN_PD_F)){
+      flags.push({t:'err',m:'No Unified class selected'+(unCls?' ("'+unCls+'" is not one of 1A/2A/3A/1B/2B/3B)':'')+
+        ' — no limits can be computed. Choose a class in section 02.'});
+      unCls='';
+    }
+  }
+  if(SYS!=='iso' && unCls){
     const isExtCls = /A$/.test(unCls);
     if(isExtCls!==ext){ flags.push({t:'err',m:'Class '+unCls+' is an '+(isExtCls?'external':'internal')+
       ' class but the thread type is set to '+(ext?'external':'internal')+'.'}); }
@@ -1031,7 +1074,13 @@ function compute(){
     devC = dev;
   }
 
-  const ok = (lim.pdMax!=null && lim.pdMin!=null);
+  /* v8 — W7: "ok" means every computed limit is a real number, not merely present.  NaN is
+     not null, so the v7 test passed NaN limits as ok.                                      */
+  const limVals = ['pdMax','pdMin','majMax','majMin','minMax','minMin','minVal']
+                    .map(k=>lim[k]).filter(v=>v!=null);
+  const ok = (lim.pdMax!=null && lim.pdMin!=null && limVals.every(v=>isFinite(v)));
+  if(!ok && (lim.pdMax!=null || lim.pdMin!=null) && !flags.some(x=>x.t==='err'))
+    flags.push({t:'err',m:'The limits came out as non-numbers — check the size, pitch and class inputs.'});
 
   /* engagement group (ISO only) */
   let eng={group:'—',lo:null,hi:null,len:null};
@@ -1195,8 +1244,34 @@ function compute(){
           gauge.goMaj = lim.majMin + Z;              /* D + EI + Z_PL   */
           gauge.ngMaj = gauge.ngCentre + 2*F1;       /* + 2F1 per T12   */
           gauge.majTol = T;                          /* ±T_PL           */
+          /* v8: explicit limits.  Table 12 gives the crest tolerance as ±T_PL (the FULL T_PL
+             each side) where the pitch ø is ±T_PL/2.  v7's export printed goMaj ± T/2 — half
+             the band the standard allows, i.e. tighter than ISO.  Fixed 25.11.2026.        */
+          gauge.goMajHi = gauge.goMaj + T; gauge.goMajLo = gauge.goMaj - T;
+          gauge.ngMajHi = gauge.ngMaj + T; gauge.ngMajLo = gauge.ngMaj - T;
           if(lim.minMin!=null) gauge.clearMax = lim.minMin - H/6;
           gauge.b1max = P/8; gauge.r1max = P*0.072;
+        }
+        /* ── screw RING crest (minor ø) & clearing (major ø), ISO 1502:1996 Table 10 — v11,
+           read from the standard 25.11.2026 (Scribd copy, Table 10 printed pp. 24–25):
+             row 1  solid GO screw ring, fig 6:   minor ø  D1 − |es|               ± T_R/2
+                                                  major ø  min = d − |es| + H/12 + T_PL  (groove b1 or radius)
+             row 11 solid NOT GO screw ring, fig 8: minor ø d2 − |es| − T_d2 − T_R/2 − 2F1  ± T_R
+                                                  major ø  min = d − |es| + T_PL          (groove b3 or radius)
+           (clause 13: moduli |es| inserted; D1 = basic minor = d − 1,082532P; F1 = 0,1P, figs 7/8.)
+           Footnote 1: the ring sizes hold when the rings are MEASURED rather than made to the check
+           plugs — "shall be agreed upon between the manufacturer and purchaser".
+           Note: unlike the plug crest (D + EI + Z_PL), the GO ring minor carries NO Z offset.     */
+        if(ext){
+          const F1 = 0.1*P, e = lim.pdMax - d2b;          /* e = es (≤ 0); D1 − |es| = d1b + e  */
+          gauge.F1 = F1;
+          gauge.goMin = d1b + e;
+          gauge.goMinHi = gauge.goMin + T/2;  gauge.goMinLo = gauge.goMin - T/2;      /* ± T_R/2 */
+          gauge.ngMin = gauge.ngCentre - 2*F1;                                       /* = d2 − |es| − T_d2 − T_R/2 − 2F1 */
+          gauge.ngMinHi = gauge.ngMin + T;    gauge.ngMinLo = gauge.ngMin - T;        /* ± T_R   */
+          gauge.ringClrGo = lim.majMax + H/12 + t4[2]/u;                             /* min, + T_PL */
+          gauge.ringClrNg = lim.majMax + t4[2]/u;                                    /* min, + T_PL */
+          gauge.TPLr = t4[2]/u;
         }
       }
       if(t5){
@@ -1229,10 +1304,120 @@ function compute(){
                 gauge.plainLo = gauge.plainCentre - t9[1]/u; }
       }
     }
-    /* manual overrides still honoured */
-    const gt=parseFloat($('gTol').value), gw=parseFloat($('gWear').value);
-    if(isFinite(gt)) gauge.tolManual=gt/((SYS==='iso')?1000:1e6);
-    if(isFinite(gw)) gauge.wearManual=gw/((SYS==='iso')?1000:1e6);
+    /* ── FINISHED-SIZE GAUGE CONVENTION — v8, Emil 25.11.2026 ─────────────────────────
+       'iso'    ISO 1502 exactly as above.  On M14x1-4H a NEW NOT GO plug may be made up to
+                T_PL = 9 µm above D2max (Table 12) and still pass, so it accepts a thread 9 µm
+                over the drawing from day one; the GO may wear 12,5 µm (Table 5) to 6,5 µm
+                BELOW D2min.  Emil 25.11.2026: "the ISO standard, which I believe is poor".
+       'strict' DEFAULT.  The same rule convention C applies before plating (section 12),
+                applied to the finished limits: every gauge sits ON its workpiece limit with
+                the gauge tolerance applied INTO the band — ASME B1.2 Table 4 placement.  A new
+                pair passes exactly the legal band.  Wear limits: GO = the product limit itself
+                (any wear past it accepts bad threads); NOT GO = its own inner make limit — a
+                gauge worn out of its make tolerance is withdrawn (Emil 25.11.2026: "if gauge
+                is worn, it's not good for being used").  Both set by us, not tabulated.
+       Plain gauges for the crest ø (major of external, minor of internal) follow the same
+       rule and the same tolerance.  Metric only — UN already uses B1.2 Table 4 above.     */
+    /* ── MANUAL OVERRIDES (section 05) — v8: they now ACT.  In v7 they were only printed
+       ("manual override") while every gauge size stayed on the table values — a user could
+       believe a gauge had been re-sized when it had not.  They apply to ISO 1502 and ASME
+       B1.2 placement; Strict has its own tolerance box and ignores them (greyed out).
+         gauge tolerance  ISO: the same zone CENTRES, new width (GO about D2min+Z / d2max−Z;
+                          NOT GO re-placed D2max…D2max+T / d2min−T…d2min per T12/T10).
+                          B1.2: unilateral inward from the limit, new width.
+         GO wear allow.   wear limit = GO centre ∓ W (plug wears smaller, ring larger).      */
+    {
+      const mU=(SYS==='iso')?1000:1e6;
+      const gtIn=parseFloat($('gTol').value), gwIn=parseFloat($('gWear').value);
+      const strictSel = SYS==='iso' && Tpd!=null && ($('fgMode')?$('fgMode').value:'strict')==='strict';
+      if(!strictSel && isFinite(gtIn) && gtIn>0 && gauge.goHi!=null && (gauge.iso||gauge.b12)){
+        const Tm=gtIn/mU; gauge.tolManual=Tm;
+        if(gauge.iso){
+          gauge.T=Tm;
+          gauge.goHi=gauge.goCentre+Tm/2; gauge.goLo=gauge.goCentre-Tm/2;
+          gauge.ngCentre = ext ? (lim.pdMin - Tm/2) : (lim.pdMax + Tm/2);
+          gauge.ngHi=gauge.ngCentre+Tm/2; gauge.ngLo=gauge.ngCentre-Tm/2;
+          if(gauge.goMaj!=null){
+            gauge.ngMaj=gauge.ngCentre+2*gauge.F1;
+            gauge.goMajHi=gauge.goMaj+Tm; gauge.goMajLo=gauge.goMaj-Tm;
+            gauge.ngMajHi=gauge.ngMaj+Tm; gauge.ngMajLo=gauge.ngMaj-Tm;
+          }
+          if(gauge.goMin!=null){            /* ring crest, Table 10 rows 1/11 with T_R replaced */
+            gauge.ngMin=gauge.ngCentre-2*gauge.F1;
+            gauge.goMinHi=gauge.goMin+Tm/2; gauge.goMinLo=gauge.goMin-Tm/2;
+            gauge.ngMinHi=gauge.ngMin+Tm;   gauge.ngMinLo=gauge.ngMin-Tm;
+          }
+          if(gauge.wGO!=null){
+            gauge.goWear = gauge.goCentre + (ext ? gauge.wGO/u : -gauge.wGO/u);
+            gauge.ngWear = gauge.ngCentre + (ext ? gauge.wNG/u : -gauge.wNG/u);
+          }
+        } else {
+          if(ext){ gauge.goLo=gauge.goHi-Tm; gauge.ngHi=gauge.ngLo+Tm; }
+          else   { gauge.goHi=gauge.goLo+Tm; gauge.ngLo=gauge.ngHi-Tm; }
+          gauge.goCentre=(gauge.goHi+gauge.goLo)/2; gauge.ngCentre=(gauge.ngHi+gauge.ngLo)/2;
+        }
+      }
+      if(!strictSel && isFinite(gwIn) && gwIn>=0 && gauge.goCentre!=null && (gauge.iso||gauge.b12)){
+        gauge.wearManual=gwIn/mU;
+        gauge.goWear = gauge.goCentre + (ext ? gauge.wearManual : -gauge.wearManual);
+      }
+    }
+
+    if(SYS==='iso' && Tpd!=null){
+      const fgMode = ($('fgMode') ? $('fgMode').value : 'strict');
+      gauge.fgMode = fgMode;
+      if(fgMode==='strict'){
+        const tIn=parseFloat($('fgTol') ? $('fgTol').value : '8');
+        const T=(isFinite(tIn)&&tIn>0 ? tIn : 8)/u;
+        gauge.strict=true; gauge.Ts=T;
+        if(ext){ gauge.goHi=lim.pdMax;   gauge.goLo=lim.pdMax-T;      /* GO ring, tol minus     */
+                 gauge.ngHi=lim.pdMin+T; gauge.ngLo=lim.pdMin;        /* NOT GO ring, tol plus  */
+                 gauge.goWear=lim.pdMax; gauge.ngWear=gauge.ngHi; }   /* rings wear LARGER      */
+        else   { gauge.goHi=lim.pdMin+T; gauge.goLo=lim.pdMin;        /* GO plug, tol plus      */
+                 gauge.ngHi=lim.pdMax;   gauge.ngLo=lim.pdMax-T;      /* NOT GO plug, tol minus */
+                 gauge.goWear=lim.pdMin; gauge.ngWear=gauge.ngLo; }   /* plugs wear SMALLER     */
+        gauge.goCentre=(gauge.goHi+gauge.goLo)/2;
+        gauge.ngCentre=(gauge.ngHi+gauge.ngLo)/2;
+        if(2*T >= (lim.pdMax-lim.pdMin)-1e-12)
+          flags.push({t:'err',m:'The two strict gauge zones ('+(2*T*u).toFixed(1)+' µm) consume the whole pitch-ø '+
+            'tolerance ('+((lim.pdMax-lim.pdMin)*u).toFixed(1)+' µm), leaving nothing to manufacture in.'});
+        /* screw-plug crest: GO major ø ON D min, into the band (ISO's D + Z_PL ± T_PL can sit
+           below D min); NOT GO keeps Table 12's 2F1 truncation about its new centre.     */
+        if(!ext && gauge.F1!=null){
+          gauge.goMajHi = lim.majMin + T; gauge.goMajLo = lim.majMin;
+          gauge.ngMaj   = gauge.ngCentre + 2*gauge.F1;
+          gauge.ngMajHi = gauge.ngMaj + T;   gauge.ngMajLo = gauge.ngMaj - T;   /* ±T, as T12 */
+        }
+        /* screw-RING crest (minor ø), v11 — the mirror: GO ring minor ON D1 − |es| (Table 10 row 1's
+           theoretical size), tolerance INTO the band (minus: a smaller ring crest only rejects more);
+           NOT GO keeps row 11's 2F1 truncation about its new centre, ± T.  The clearing (major)
+           ø minimums are clearances, not checks, and stay at Table 10's formulae.            */
+        if(ext && gauge.goMin!=null){
+          gauge.goMinHi = gauge.goMin;     gauge.goMinLo = gauge.goMin - T;
+          gauge.ngMin   = gauge.ngCentre - 2*gauge.F1;
+          gauge.ngMinHi = gauge.ngMin + T; gauge.ngMinLo = gauge.ngMin - T;
+        }
+        /* plain crest gauges */
+        if(ext && lim.majMax!=null && lim.majMin!=null){
+          gauge.sPlainGoHi=lim.majMax;   gauge.sPlainGoLo=lim.majMax-T;   /* GO plain ring/snap */
+          gauge.sPlainNgHi=lim.majMin+T; gauge.sPlainNgLo=lim.majMin;
+        } else if(!ext && lim.minMin!=null && lim.minMax!=null){
+          gauge.sPlainGoHi=lim.minMin+T; gauge.sPlainGoLo=lim.minMin;     /* GO plain plug */
+          gauge.sPlainNgHi=lim.minMax;   gauge.sPlainNgLo=lim.minMax-T;
+        }
+      }
+    }
+    /* ── acceptance audit for the FINISHED pair — whichever convention ran ── */
+    if(gauge.goHi!=null && gauge.ngHi!=null){
+      gauge.legalBand = lim.pdMax - lim.pdMin;
+      gauge.goEsc  = Math.max(0, ext ? (gauge.goHi - lim.pdMax) : (lim.pdMin - gauge.goLo));
+      gauge.ngEsc  = Math.max(0, ext ? (lim.pdMin - gauge.ngLo) : (gauge.ngHi - lim.pdMax));
+      gauge.widest = ext ? (gauge.goHi - gauge.ngLo) : (gauge.ngHi - gauge.goLo);
+      gauge.shop   = ext ? (gauge.goLo - gauge.ngHi) : (gauge.ngLo - gauge.goHi);
+      if(gauge.goWear!=null)
+        gauge.goWearEsc = Math.max(0, ext ? (gauge.goWear - lim.pdMax) : (lim.pdMin - gauge.goWear));
+    }
+
   }
 
   /* ── pre-plating ── */
@@ -1247,6 +1432,12 @@ function compute(){
       const Tpdw=(SYS==='iso')?Tpd/1000:Tpd, Tcdw=(SYS==='iso')?Tcd/1000:Tcd;
       plat={tmin,tmax,mode:pm,shrink4:s4,shrink2:s2,u};
       const cMax = ext?lim.majMax:lim.minMax, cMin = ext?lim.majMin:lim.minMin;
+      /* v8: internal ROOT (major ø) — ISO 965-1 gives only a minimum.  A coating on the root
+         moves it by 2t, the thickest coating governing that minimum (same rule as the crest). */
+      if(!ext && lim.majMin!=null) plat.rootMin = lim.majMin + (pm==='after' ? 2*tmax : -2*tmax);
+      /* v11: external ROOT reference for the GO ring crest — the basic-profile flat d1 − |es|
+         (= Table 10 row 1's D1 − |es|), moved by 2t, the thickest coating governing it.        */
+      if(ext) plat.rootMax = (d1b + (lim.pdMax - d2b)) + (pm==='after' ? -2*tmax : 2*tmax);
       if(pm==='after'){
         if(ext){ plat.pdMax=lim.pdMax-4*tmax; plat.pdMin=lim.pdMin-4*tmin;
                  plat.cdMax=cMax-2*tmax;      plat.cdMin=cMin-2*tmin; }
@@ -1359,6 +1550,47 @@ function compute(){
          product limit, because any wear past it starts accepting out-of-limit threads */
       platGauge.wearIsLimit=true;
       platGauge.goWear = ext?plat.pdMax:plat.pdMin;
+      /* v8 (Emil 25.11.2026): NOT GO wear limit = its own inner make limit, as the strict
+         finished pair — a gauge worn out of its make tolerance is withdrawn.            */
+      platGauge.ngWear = ext?platGauge.ngHi:platGauge.ngLo;
+      /* v8: plain gauges for the CREST ø before plating, same rule, same tolerance.
+         Crest moves by 2t.  The maximum-material side (GO) is set by the THICKEST coating,
+         the least-material side (NOT GO) by the THINNEST — already true of plat.cd*.     */
+      if(isFinite(plat.cdMax) && isFinite(plat.cdMin) && plat.cdMax>plat.cdMin){
+        if(ext){ platGauge.plainGoHi=plat.cdMax;   platGauge.plainGoLo=plat.cdMax-T;
+                 platGauge.plainNgHi=plat.cdMin+T; platGauge.plainNgLo=plat.cdMin; }
+        else   { platGauge.plainGoHi=plat.cdMin+T; platGauge.plainGoLo=plat.cdMin;
+                 platGauge.plainNgHi=plat.cdMax;   platGauge.plainNgLo=plat.cdMax-T; }
+        if(2*T >= plat.cdMax-plat.cdMin-1e-12)
+          flags.push({t:'err',m:'The two plain crest-ø gauge zones ('+(2*T*uu).toFixed(1)+un+') consume the whole '+
+            'pre-plate crest band ('+((plat.cdMax-plat.cdMin)*uu).toFixed(1)+un+').'});
+      }
+      /* v8: screw-PLUG crest & clearing ø before plating — the finished strict rule moved to
+         the pre-plate band: GO major ø ON the pre-plate root minimum, into the band; NOT GO
+         keeps Table 12's 2F1 truncation about its own centre; clearing ø from the pre-plate
+         D1 minimum.  (v11: rings below — Table 10 rows 1/11 moved to the pre-plate band.)  */
+      if(!ext && plat.rootMin!=null){
+        const F1=0.1*P;
+        platGauge.F1=F1;
+        platGauge.goMajHi=plat.rootMin+T;  platGauge.goMajLo=plat.rootMin;
+        platGauge.ngMaj=platGauge.ngCentre+2*F1;
+        platGauge.ngMajHi=platGauge.ngMaj+T; platGauge.ngMajLo=platGauge.ngMaj-T;
+        if(isFinite(plat.cdMin)) platGauge.clearMax=plat.cdMin-H/6;
+      }
+      /* v11: screw-RING crest & clearing ø before plating — GO ring minor ON the pre-plate root
+         reference (d1 − |es| − 2·t_max), into the band; NOT GO 2F1 below its own centre, ± T;
+         clearing (major) minimums from the pre-plate major maximum + Table 10's allowances
+         (H/12 + T_PL for GO, T_PL for NOT GO; T_PL from Table 4 for the declared class).     */
+      if(ext && plat.rootMax!=null){
+        const F1=0.1*P, TPL=(gauge.TPLr!=null?gauge.TPLr:null);
+        platGauge.F1=F1;
+        platGauge.goMinHi=plat.rootMax;     platGauge.goMinLo=plat.rootMax-T;
+        platGauge.ngMin=platGauge.ngCentre-2*F1;
+        platGauge.ngMinHi=platGauge.ngMin+T; platGauge.ngMinLo=platGauge.ngMin-T;
+        if(TPL!=null && isFinite(plat.cdMax)){
+          platGauge.ringClrGo=plat.cdMax+H/12+TPL; platGauge.ringClrNg=plat.cdMax+TPL;
+        }
+      }
       if(2*T>=band) flags.push({t:'err',m:'The two gauge zones together ('+(2*T*uu).toFixed(1)+un+
         ') consume the whole pre-plate band ('+(band*uu).toFixed(1)+un+'), leaving nothing to manufacture in.'});
     }
@@ -1461,6 +1693,14 @@ function uf(){ /* working-unit → display-unit factor */
   return du==='mm' ? 25.4 : 1;
 }
 function f(v){ const n=parseInt($('dp').value); return v==null?'—':(v*uf()).toFixed(n); }
+/* v8 — rounding INTO a band, for gauge limits and pre-plate shop limits on screen (the
+   CSV already did this).  fDn for a MAXIMUM, fUp for a MINIMUM: rounding can then only
+   tighten, never open an escape.  Finished thread limits keep f(), as ISO prints them. */
+function fDir(v,dir){ const n=parseInt($('dp').value), m=Math.pow(10,n);
+  if(v==null||!isFinite(v)) return '—'; const x=v*uf()*m;
+  return ((dir>0?Math.ceil(x-1e-6):Math.floor(x+1e-6))/m).toFixed(n); }
+function fUp(v){ return fDir(v,1); }
+function fDn(v){ return fDir(v,-1); }
 function fr(v){ const n=parseInt($('dp').value); return v==null?'—':v.toFixed(n); } /* already display units */
 function uName(){ return $('dunit').value==='mm'?'mm':'in'; }
 function microName(){ return SYS==='iso' ? 'µm' : 'µin'; }
@@ -1468,6 +1708,7 @@ function toMicro(v){ return v==null?null:(SYS==='iso'? v : v); }
 
 function render(){
   const r=compute(); LAST=r;
+  if($('gOvWrap')) $('gOvWrap').classList.toggle('na', SYS==='iso' && $('fgMode').value==='strict');
   syncHistName();          /* the history label follows the engine, never a stale designation */
   if(r.err){ $('head').innerHTML='<div class="flag err">'+r.err+'</div>'; return; }
   const ext=r.ext, L=r.lim, mid=(a,b)=>(a==null||b==null)?null:(a+b)/2;
@@ -1619,7 +1860,9 @@ function render(){
     gt+='<tr class="grp"><td colspan="3">'+
         (isRing?'Screw RING gauges — external thread':'Screw PLUG gauges — internal thread')+
         (plated?' — <b>FINISHED (PLATED) SIZE</b>':'')+
-        (G.iso?'<span class="pill src">ISO 1502</span>':'<span class="pill">target sizes only</span>')+'</td></tr>';
+        (G.strict?'<span class="pill src">STRICT — on the limit, into the band</span>'
+         :G.iso?'<span class="pill src">ISO 1502</span>'
+         :G.b12?'<span class="pill src">ASME B1.2</span>':'<span class="pill">target sizes only</span>')+'</td></tr>';
     if(plated)
       gt+='<tr><td colspan="3" class="lab">⚠ These gauge the part <b>after</b> plating. To inspect it '+
           '<b>before</b> it goes to the plater, use the pre-plating gauge table in <b>section 12</b> — '+
@@ -1628,13 +1871,43 @@ function render(){
           'pre-plate limits therefore sit 4·t '+(isRing?'below':'above')+' the finished ones. They are the '+
           'ones to buy if you only buy one pair. (The gauge sizes need not differ by exactly 4·t — the two '+
           'tables can be placed by different conventions.)</td></tr>';
-    if(G.iso){
+    if(G.iso && G.strict){
+      const um1=v=>(v*1000).toFixed(1)+' µm';
       gt+='<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td>'+
-          '<td class="max">'+f(G.goHi)+'</td><td class="min">'+f(G.goLo)+'</td></tr>'+
-          '<tr><td class="lab">&nbsp;&nbsp;zone centre &amp; tolerance</td><td>'+f(G.goCentre)+
-          '</td><td>'+(isRing?'T<sub>R</sub> ':'T<sub>PL</sub> ')+(isRing?G.TR:G.TPL)+' '+MUg+'</td></tr>'+
+          '<td class="max">'+fDn(G.goHi)+'</td><td class="min">'+fUp(G.goLo)+'</td></tr>'+
           '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td>'+
-          '<td class="max">'+f(G.ngHi)+'</td><td class="min">'+f(G.ngLo)+'</td></tr>'+
+          '<td class="max">'+fDn(G.ngHi)+'</td><td class="min">'+fUp(G.ngLo)+'</td></tr>'+
+          '<tr><td class="lab">Workpiece limit the gauge represents</td><td>'+f(G.goPd)+'</td><td>'+f(G.ngPd)+'</td></tr>'+
+          '<tr><td class="lab">Gauge tolerance <span class="pill">set by us</span></td><td colspan="2">'+um1(G.Ts)+
+          ' — applied '+(isRing?'minus on the GO, plus on the NOT GO':'plus on the GO, minus on the NOT GO')+
+          ' (into the band)</td></tr>'+
+          '<tr class="grp"><td colspan="3">Wear — state both limits on the gauge drawing</td></tr>'+
+          '<tr><td class="lab">GO wear limit <span class="pill">the product limit</span></td><td colspan="2">'+(isRing?fDn:fUp)(G.goWear)+
+          ' — any wear past it accepts bad threads</td></tr>'+
+          '<tr><td class="lab">NOT GO wear limit <span class="pill">its make limit</span></td><td colspan="2">'+(isRing?fDn:fUp)(G.ngWear)+
+          ' — worn out of its make tolerance = withdrawn</td></tr>';
+      if(G.goMajHi!=null)
+        gt+='<tr class="grp"><td colspan="3">Screw plug crest &amp; clearing ø (Table 12 geometry)</td></tr>'+
+            '<tr><td class="lab">GO plug major ø <span class="pill">on D min, into the band</span></td>'+
+            '<td class="max">'+fDn(G.goMajHi)+'</td><td class="min">'+fUp(G.goMajLo)+'</td></tr>'+
+            '<tr><td class="lab">NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)</td>'+
+            '<td class="max">'+fDn(G.ngMajHi)+'</td><td class="min">'+fUp(G.ngMajLo)+'</td></tr>'+
+            (G.clearMax!=null?'<tr><td class="lab">Clearing ø max (D1 min − H/6)</td><td colspan="2">'+fDn(G.clearMax)+'</td></tr>':'');
+      if(G.sPlainGoHi!=null)
+        gt+='<tr class="grp"><td colspan="3">Plain gauges for the '+(r.ext?'major':'minor')+' ø — strict</td></tr>'+
+            '<tr><td class="lab">Plain GO '+(r.ext?'ring / snap':'plug')+'</td><td class="max">'+fDn(G.sPlainGoHi)+
+            '</td><td class="min">'+fUp(G.sPlainGoLo)+'</td></tr>'+
+            '<tr><td class="lab">Plain NOT GO '+(r.ext?'ring / snap':'plug')+'</td><td class="max">'+fDn(G.sPlainNgHi)+
+            '</td><td class="min">'+fUp(G.sPlainNgLo)+'</td></tr>';
+    }
+    if(G.iso && !G.strict){
+      gt+='<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td>'+
+          '<td class="max">'+fDn(G.goHi)+'</td><td class="min">'+fUp(G.goLo)+'</td></tr>'+
+          '<tr><td class="lab">&nbsp;&nbsp;zone centre &amp; tolerance</td><td>'+f(G.goCentre)+
+          '</td><td>'+(isRing?'T<sub>R</sub> ':'T<sub>PL</sub> ')+
+          (G.tolManual!=null?(G.tolManual*1000).toFixed(1)+' '+MUg+' (override)':(isRing?G.TR:G.TPL)+' '+MUg)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td>'+
+          '<td class="max">'+fDn(G.ngHi)+'</td><td class="min">'+fUp(G.ngLo)+'</td></tr>'+
           '<tr><td class="lab">Workpiece limit the gauge represents</td><td>'+f(G.goPd)+'</td><td>'+f(G.ngPd)+'</td></tr>'+
           '<tr class="grp"><td colspan="3">ISO 1502 Table 4 values for T'+(r.ext?'d2':'D2')+' = '+r.Tpd+' µm</td></tr>'+
           '<tr><td class="lab">T<sub>R</sub> ring / T<sub>PL</sub> plug / T<sub>CP</sub> check plug</td>'+
@@ -1645,17 +1918,38 @@ function render(){
       if(G.wGO!=null)
         gt+='<tr class="grp"><td colspan="3">Table 5 — permissible wear on pitch ø</td></tr>'+
             '<tr><td class="lab">GO gauge</td><td colspan="2">'+G.wGO+' '+MUg+'</td></tr>'+
-            '<tr><td class="lab">NOT GO gauge</td><td colspan="2">'+G.wNG+' '+MUg+'</td></tr>';
+            '<tr><td class="lab">NOT GO gauge</td><td colspan="2">'+G.wNG+' '+MUg+'</td></tr>'+
+            (G.goWear!=null?'<tr><td class="lab">GO wear limit (T12 note 1 / T10)</td><td colspan="2">'+(isRing?fDn:fUp)(G.goWear)+'</td></tr>':'')+
+            (G.ngWear!=null?'<tr><td class="lab">NOT GO wear limit (T12 note 2 / T10)</td><td colspan="2">'+(isRing?fDn:fUp)(G.ngWear)+'</td></tr>':'');
+    }
+    /* v11 — screw RING crest & clearing ø (ISO 1502 Table 10 rows 1/11), both conventions */
+    if(G.iso && G.goMinHi!=null)
+      gt+='<tr class="grp"><td colspan="3">Screw ring crest &amp; clearing ø — Table 10 rows 1 / 11'+
+          (G.strict?' (crest: strict)':'')+'</td></tr>'+
+          '<tr><td class="lab">GO ring minor ø '+(G.strict?'<span class="pill">on D1 − |es|, into the band</span>':'(D1 − |es| ± T<sub>R</sub>/2)')+'</td>'+
+          '<td class="max">'+fDn(G.goMinHi)+'</td><td class="min">'+fUp(G.goMinLo)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO ring minor ø (− 2F₁, F₁ = 0,1P)</td>'+
+          '<td class="max">'+fDn(G.ngMinHi)+'</td><td class="min">'+fUp(G.ngMinLo)+'</td></tr>'+
+          '<tr><td class="lab">GO ring major ø (clearing) min — d − |es| + H/12 + T<sub>PL</sub></td><td colspan="2">'+fUp(G.ringClrGo)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO ring major ø (clearing) min — d − |es| + T<sub>PL</sub></td><td colspan="2">'+fUp(G.ringClrNg)+'</td></tr>';
+    if(G.iso && !G.strict && G.goMajHi!=null)
+      gt+='<tr class="grp"><td colspan="3">Screw plug crest &amp; clearing ø — Table 12</td></tr>'+
+          '<tr><td class="lab">GO plug major ø (D + EI + Z<sub>PL</sub> ± T<sub>PL</sub>)</td>'+
+          '<td class="max">'+fDn(G.goMajHi)+'</td><td class="min">'+fUp(G.goMajLo)+'</td></tr>'+
+          '<tr><td class="lab">NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)</td>'+
+          '<td class="max">'+fDn(G.ngMajHi)+'</td><td class="min">'+fUp(G.ngMajLo)+'</td></tr>'+
+          (G.clearMax!=null?'<tr><td class="lab">Clearing ø max (D1 min − H/6)</td><td colspan="2">'+fDn(G.clearMax)+'</td></tr>':'');
+    if(G.iso){
       if(G.flank)
         gt+='<tr class="grp"><td colspan="3">Table 6 — tolerance on each flank angle (P = '+fmtP(r.P)+' mm)</td></tr>'+
             '<tr><td class="lab">T<sub>α1</sub>/2 (figs 5 &amp; 6) / T<sub>α2</sub>/2 (figs 7 &amp; 8)</td>'+
             '<td colspan="2">±'+G.flank[0]+"' / ±"+G.flank[1]+"'</td></tr>";
       gt+='<tr class="grp"><td colspan="3">Table 7 — pitch tolerance T<sub>p</sub> by gauge thread length</td></tr>'+
           '<tr><td class="lab">≤32 mm / &gt;32–50 mm / &gt;50–80 mm</td><td colspan="2">5 / 6 / 7 '+MUg+'</td></tr>';
-      if(G.plainTol!=null)
+      if(G.plainTol!=null && !G.strict)
         gt+='<tr class="grp"><td colspan="3">Table '+(r.ext?'8':'9')+' — plain GO gauge for the '+
             (r.ext?'major':'minor')+' ø</td></tr>'+
-            '<tr><td class="lab">Plain GO gauge size</td><td class="max">'+f(G.plainHi)+'</td><td class="min">'+f(G.plainLo)+'</td></tr>'+
+            '<tr><td class="lab">Plain GO gauge size</td><td class="max">'+fDn(G.plainHi)+'</td><td class="min">'+fUp(G.plainLo)+'</td></tr>'+
             '<tr><td class="lab">&nbsp;&nbsp;'+(r.ext?'H₂/2':'H₁/2')+' / '+(r.ext?'Z₂':'Z₁')+
             (r.ext?' / H<sub>p</sub>/2':'')+'</td><td colspan="2">'+G.plainTol+' / '+G.plainZ+
             (r.ext?' / '+G.plainCheck:'')+' '+MUg+'</td></tr>';
@@ -1665,8 +1959,27 @@ function render(){
           '<tr><td class="lab">Plain GO '+(isRing?'(major ø)':'(minor ø)')+'</td><td colspan="2">'+f(G.goPlain)+'</td></tr>'+
           '<tr><td class="lab">Plain NOT GO</td><td colspan="2">'+f(G.ngPlain)+'</td></tr>';
     }
-    if(G.tolManual!=null) gt+='<tr><td class="lab">Gauge PD tolerance (manual override)</td><td colspan="2">±'+f(G.tolManual/2)+'</td></tr>';
-    if(G.wearManual!=null) gt+='<tr><td class="lab">Wear allowance (manual override)</td><td colspan="2">'+f(G.wearManual)+'</td></tr>';
+    if(G.tolManual!=null) gt+='<tr><td class="lab">Gauge PD tolerance — manual override <span class="pill">applied above</span></td><td colspan="2">'+
+      (G.iso?'±'+f(G.tolManual/2)+' (replaces T'+(isRing?'<sub>R</sub>':'<sub>PL</sub>')+')':f(G.tolManual)+' (replaces class X)')+'</td></tr>';
+    if(G.wearManual!=null) gt+='<tr><td class="lab">GO wear allowance — manual override <span class="pill">applied</span></td><td colspan="2">'+
+      f(G.wearManual)+' → GO wear limit '+(isRing?fDn:fUp)(G.goWear)+'</td></tr>';
+    /* v8 — the acceptance audit for the FINISHED pair, same questions section 12 asks */
+    if(G.legalBand!=null){
+      const umA=v=>(v*(r.SYS==='iso'?1000:1e6)).toFixed(1)+(r.SYS==='iso'?' µm':' µin');
+      gt+='<tr class="grp"><td colspan="3">What this gauge pair actually accepts</td></tr>'+
+          '<tr><td class="lab">Legal pitch-ø band</td><td colspan="2">'+umA(G.legalBand)+'</td></tr>'+
+          '<tr><td class="lab">New GO can accept past the maximum-material limit</td><td colspan="2">'+
+          (G.goEsc>1e-12?'<b>'+umA(G.goEsc)+'</b>':'none')+'</td></tr>'+
+          '<tr><td class="lab">New NOT GO can accept past the least-material limit</td><td colspan="2">'+
+          (G.ngEsc>1e-12?'<b>'+umA(G.ngEsc)+'</b>':'none')+'</td></tr>'+
+          (G.goWearEsc!=null?'<tr><td class="lab">Fully worn GO accepts past the limit</td><td colspan="2">'+
+          (G.goWearEsc>1e-12?'<b>'+umA(G.goWearEsc)+'</b>':'none')+'</td></tr>':'')+
+          '<tr><td class="lab">Widest window the pair passes'+
+          (G.widest>G.legalBand+1e-12?' <span class="pill">exceeds the legal band</span>':
+                                      ' <span class="pill">equals the legal band</span>')+
+          '</td><td colspan="2">'+umA(G.widest)+'</td></tr>'+
+          '<tr><td class="lab">Narrowest window the shop must hold</td><td colspan="2">'+umA(G.shop)+'</td></tr>';
+    }
   }
   gt+='<tr class="grp"><td colspan="3">Profile</td></tr>'+
       '<tr><td class="lab">H (fundamental triangle)</td><td colspan="2">'+f(r.H)+'</td></tr>'+
@@ -1688,6 +2001,16 @@ function render(){
   }
   $('tGeo').innerHTML=gt;
   $('geoNote').innerHTML=
+    (r.gauge&&r.gauge.strict
+      ? '<b>Strict convention (v8, Emil 25.11.2026).</b> Every gauge sits <i>on</i> its workpiece limit and '+
+        'the gauge tolerance is applied <i>into</i> the band — ASME B1.2 Table 4 placement, the same rule as '+
+        'convention C before plating. A new pair passes exactly the legal band; the GO may not wear past the '+
+        'product limit and the NOT GO is withdrawn once worn out of its make tolerance. <b>Neither the '+
+        'placement for metric threads nor the tolerance is tabulated</b> — it is our rule, chosen because '+
+        'ISO 1502 places a new NOT GO up to T<sub>PL</sub>/T<sub>R</sub> outside the band and lets the GO wear '+
+        'past the limit. Thread form (flank angles, pitch) still follows ISO 1502 Tables 6–7 below. Switch '+
+        '<b>Finished-size gauge convention</b> in section 05 to ISO 1502 for the standard figures.<br><br>'
+      : '')+
     (r.gauge&&r.gauge.iso
       ? '<b>ISO 1502:1996 Tables 4–9 are now built in</b> (values in µm, indexed by the workpiece pitch-ø '+
         'tolerance, not by diameter). The <b>GO</b> tolerance zone is placed from the standard\'s own symbol '+
@@ -1729,10 +2052,14 @@ function render(){
     const p=r.plat, after=p.mode==='after', MUn=microName();
     let pt='<tr><th>Diameter</th><th>'+(after?'Pre-plate max':'As-plated max')+'</th><th>'+
            (after?'Pre-plate min':'As-plated min')+'</th><th>Band</th></tr>';
-    pt+='<tr><td class="lab">Pitch ø (4t)</td><td class="max">'+f(p.pdMax)+'</td><td class="min">'+f(p.pdMin)+
+    pt+='<tr><td class="lab">Pitch ø (4t)</td><td class="max">'+fDn(p.pdMax)+'</td><td class="min">'+fUp(p.pdMin)+
         '</td><td>'+f(p.pdMax-p.pdMin)+'</td></tr>'+
-        '<tr><td class="lab">Crest ø (2t)</td><td class="max">'+f(p.cdMax)+'</td><td class="min">'+f(p.cdMin)+
+        '<tr><td class="lab">Crest ø (2t)</td><td class="max">'+fDn(p.cdMax)+'</td><td class="min">'+fUp(p.cdMin)+
         '</td><td>'+f(p.cdMax-p.cdMin)+'</td></tr>'+
+        (p.rootMin!=null?'<tr><td class="lab">Major ø D min (root, 2t)</td><td class="max">—</td><td class="min">'+
+          fUp(p.rootMin)+'</td><td>—</td></tr>':'')+
+        (p.rootMax!=null?'<tr><td class="lab">Root reference d1 − |es| (2t) <span class="pill">GO ring crest</span></td><td class="max">'+
+          fDn(p.rootMax)+'</td><td class="min">—</td><td>—</td></tr>':'')+
         '<tr class="grp"><td colspan="4">Coating</td></tr>'+
         '<tr><td class="lab">Thickness range</td><td colspan="3">'+(p.tmin*p.u).toFixed(1)+' – '+
         (p.tmax*p.u).toFixed(1)+' '+MUn+'</td></tr>'+
@@ -1773,15 +2100,63 @@ function render(){
           'placed by different conventions.</td></tr>'+
           '<tr class="grp"><td colspan="3">Convention: '+MODE+'</td></tr>'+
           '<tr><td class="lab">GO gauge pitch ø <span class="pill">full form</span></td>'+
-          '<td class="max">'+f(PG.goHi)+'</td><td class="min">'+f(PG.goLo)+'</td></tr>'+
+          '<td class="max">'+fDn(PG.goHi)+'</td><td class="min">'+fUp(PG.goLo)+'</td></tr>'+
           '<tr><td class="lab">NOT GO gauge pitch ø <span class="pill">truncated</span></td>'+
-          '<td class="max">'+f(PG.ngHi)+'</td><td class="min">'+f(PG.ngLo)+'</td></tr>'+
+          '<td class="max">'+fDn(PG.ngHi)+'</td><td class="min">'+fUp(PG.ngLo)+'</td></tr>'+
           '<tr><td class="lab">'+(pre?'Pre-plate':'As-plated')+' limit represented '+
           '<span class="pill">GO / NOT GO — not max / min</span></td>'+
-          '<td>'+f(PG.goPd)+'</td><td>'+f(PG.ngPd)+'</td></tr>'+
+          '<td>'+(isRingP?fDn:fUp)(PG.goPd)+'</td><td>'+(isRingP?fUp:fDn)(PG.ngPd)+'</td></tr>'+
           '<tr><td class="lab">Gauge tolerance</td><td colspan="2">'+
           (PG.TdispUm!=null?PG.TdispUm.toFixed(1)+un:'—')+
           (PG.iso?(isRingP?'  (T<sub>R</sub>)':'  (T<sub>PL</sub>)'):'')+'</td></tr>';
+      /* v8 — say HOW each gauge limit came from the finished limit and WHICH coating value
+         drives it (Emil 25.11.2026).  Rule: the maximum-material side (GO) is set by the
+         THICKEST coating, the least-material side (NOT GO) by the THINNEST.  Sign: '+'
+         where the reference sits above the finished limit (internal & class-after, or
+         external & class-before), '−' otherwise.                                        */
+      {
+        const L=r.lim, p=r.plat, ext=r.ext, sg=((!ext&&pre)||(ext&&!pre))?' + ':' − ';
+        const tU=v=>(v*p.u).toFixed(1)+' '+microName();
+        const goF=ext?L.pdMax:L.pdMin, ngF=ext?L.pdMin:L.pdMax;
+        const cGoF=ext?L.majMax:L.minMin, cNgF=ext?L.majMin:L.minMax;
+        /* the working is shown at ≥4 dp (≥5 inch): at 3 dp "13.350 + 0.092 = 13.443" is right
+           (13.3505 + 0.092 = 13.4425, rounded up) but reads like an arithmetic slip.       */
+        const dW=Math.max(parseInt($('dp').value,10)||3, r.SYS==='iso'?4:5), mW=Math.pow(10,dW);
+        const fW=v=>(v*uf()).toFixed(dW);
+        const wUp=v=>(Math.ceil(v*uf()*mW-1e-6)/mW).toFixed(dW), wDn=v=>(Math.floor(v*uf()*mW+1e-6)/mW).toFixed(dW);
+        g2+='<tr class="grp"><td colspan="3">How the plating sets each limit — GO by t<sub>max</sub>, NOT GO by t<sub>min</sub></td></tr>'+
+            '<tr><td class="lab">GO pitch ø '+(pre?'pre-plate':'as-plated')+' limit</td><td colspan="2">'+
+            fW(goF)+sg+'4 × '+tU(p.tmax)+' = <b>'+(isRingP?wDn:wUp)(PG.goPd)+'</b></td></tr>'+
+            '<tr><td class="lab">NOT GO pitch ø '+(pre?'pre-plate':'as-plated')+' limit</td><td colspan="2">'+
+            fW(ngF)+sg+'4 × '+tU(p.tmin)+' = <b>'+(isRingP?wUp:wDn)(PG.ngPd)+'</b></td></tr>';
+        if(PG.plainGoHi!=null && cGoF!=null && cNgF!=null)
+          g2+='<tr><td class="lab">GO '+(ext?'major':'minor')+' ø (crest, 2t)</td><td colspan="2">'+
+              fW(cGoF)+sg+'2 × '+tU(p.tmax)+' = <b>'+(ext?wDn:wUp)(ext?p.cdMax:p.cdMin)+'</b></td></tr>'+
+              '<tr><td class="lab">NOT GO '+(ext?'major':'minor')+' ø (crest, 2t)</td><td colspan="2">'+
+              fW(cNgF)+sg+'2 × '+tU(p.tmin)+' = <b>'+(ext?wUp:wDn)(ext?p.cdMin:p.cdMax)+'</b></td></tr>';
+      }
+      if(PG.goMajHi!=null)
+        g2+='<tr class="grp"><td colspan="3">Screw plug crest &amp; clearing ø — '+(pre?'pre-plate':'as-plated')+'</td></tr>'+
+            '<tr><td class="lab">GO plug major ø <span class="pill">on the root minimum, into the band</span></td>'+
+            '<td class="max">'+fDn(PG.goMajHi)+'</td><td class="min">'+fUp(PG.goMajLo)+'</td></tr>'+
+            '<tr><td class="lab">NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)</td>'+
+            '<td class="max">'+fDn(PG.ngMajHi)+'</td><td class="min">'+fUp(PG.ngMajLo)+'</td></tr>'+
+            (PG.clearMax!=null?'<tr><td class="lab">Clearing ø max (D1 min − H/6)</td><td colspan="2">'+fDn(PG.clearMax)+'</td></tr>':'');
+      if(PG.goMinHi!=null)
+        g2+='<tr class="grp"><td colspan="3">Screw ring crest &amp; clearing ø — '+(pre?'pre-plate':'as-plated')+' (Table 10 rows 1 / 11)</td></tr>'+
+            '<tr><td class="lab">GO ring minor ø <span class="pill">on the root reference, into the band</span></td>'+
+            '<td class="max">'+fDn(PG.goMinHi)+'</td><td class="min">'+fUp(PG.goMinLo)+'</td></tr>'+
+            '<tr><td class="lab">NOT GO ring minor ø (− 2F₁, F₁ = 0,1P)</td>'+
+            '<td class="max">'+fDn(PG.ngMinHi)+'</td><td class="min">'+fUp(PG.ngMinLo)+'</td></tr>'+
+            (PG.ringClrGo!=null?'<tr><td class="lab">GO ring major ø (clearing) min</td><td colspan="2">'+fUp(PG.ringClrGo)+'</td></tr>'+
+            '<tr><td class="lab">NOT GO ring major ø (clearing) min</td><td colspan="2">'+fUp(PG.ringClrNg)+'</td></tr>':'');
+      if(PG.plainGoHi!=null)
+        g2+='<tr class="grp"><td colspan="3">Plain gauges for the '+(isRingP?'major':'minor')+' ø — '+
+            (pre?'pre-plate':'as-plated')+', same convention</td></tr>'+
+            '<tr><td class="lab">Plain GO '+(isRingP?'ring / snap':'plug')+'</td><td class="max">'+fDn(PG.plainGoHi)+
+            '</td><td class="min">'+fUp(PG.plainGoLo)+'</td></tr>'+
+            '<tr><td class="lab">Plain NOT GO '+(isRingP?'ring / snap':'plug')+'</td><td class="max">'+fDn(PG.plainNgHi)+
+            '</td><td class="min">'+fUp(PG.plainNgLo)+'</td></tr>';
       if(PG.iso)
         g2+='<tr><td class="lab">&nbsp;&nbsp;Table 4 row used</td><td colspan="2">'+
             PG.idxUm.toFixed(0)+un+' ('+PG.idxBasis+') → row ≤'+PG.idxRow+
@@ -1802,16 +2177,18 @@ function render(){
       g2+='<tr class="grp"><td colspan="3">Wear</td></tr>';
       if(PG.wearIsLimit)
         g2+='<tr><td class="lab">GO wear limit <span class="pill">we set it</span></td>'+
-            '<td colspan="2">'+f(PG.goWear)+' — the product limit itself; no tabulated allowance '+
-            'exists for this convention, and any wear past it starts accepting bad threads</td></tr>';
+            '<td colspan="2">'+(isRingP?fDn:fUp)(PG.goWear)+' — the product limit itself; no tabulated allowance '+
+            'exists for this convention, and any wear past it starts accepting bad threads</td></tr>'+
+            (PG.ngWear!=null?'<tr><td class="lab">NOT GO wear limit <span class="pill">we set it</span></td>'+
+            '<td colspan="2">'+(isRingP?fDn:fUp)(PG.ngWear)+' — its own make limit; worn out of its make tolerance = withdrawn</td></tr>':'');
       else if(PG.goWear!=null)
         g2+='<tr><td class="lab">GO wear limit (ISO 1502 Table 5, W = '+PG.wGO+' µm)</td>'+
-            '<td colspan="2">'+f(PG.goWear)+'</td></tr>'+
+            '<td colspan="2">'+(isRingP?fDn:fUp)(PG.goWear)+'</td></tr>'+
             '<tr><td class="lab">&nbsp;&nbsp;worn GO accepts past the limit</td><td colspan="2">'+
             (PG.goWearEsc>1e-12?'<b>'+um(PG.goWearEsc)+'</b>  — consider clamping the wear limit to '+
-              f(PG.goPd)+' instead':'none')+'</td></tr>'+
+              (isRingP?fDn:fUp)(PG.goPd)+' instead':'none')+'</td></tr>'+
             '<tr><td class="lab">NOT GO wear limit (W = '+PG.wNG+' µm)</td><td colspan="2">'+
-            f(PG.ngWear)+' <span class="pill">wears toward over-rejection — safe</span></td></tr>';
+            (isRingP?fDn:fUp)(PG.ngWear)+' <span class="pill">wear shrinks the escape above — it never removes it</span></td></tr>';
       $('tPlatG').innerHTML=g2;
       $('platGNote').innerHTML =
         '<b>⚠ DERIVED, NOT TABULATED.</b> Neither ISO 1502 nor ASME B1.2 covers gauging a thread that '+
@@ -1829,9 +2206,10 @@ function render(){
         'band. It cannot pass a bad thread, at the cost of shop window and a gauge tolerance no table '+
         'covers — and its GO gauge has no built-in wear allowance, so the wear limit must be stated on '+
         'the gauge drawing.'+
-        '<br><br><b>Rounding matters when you quote these.</b> A GO nominal must be rounded <i>up</i> and '+
-        'a NOT GO nominal <i>down</i>, or the rounding itself opens an escape — at 3 decimal places that '+
-        'is worth up to half a micron. Set decimal places to 4 before transcribing to a gauge drawing.';
+        '<br><br><b>Rounding (v8).</b> Every gauge limit and pre-plate limit on this page is now rounded '+
+        '<i>into</i> its band — a maximum down, a minimum up — so a figure copied at any Decimals setting '+
+        'cannot open an escape. Finished thread limits are still rounded to the nearest, as ISO prints them. '+
+        'At 3 decimals the inward rounding can cost up to 1 µm per limit; set 4 decimals for a gauge drawing.';
     } else { $('tPlatG').innerHTML=''; $('platGNote').innerHTML=''; }
     $('platSec').style.display='';
   } else $('platSec').style.display='none';
@@ -2040,7 +2418,37 @@ function exportRows(r){
   if(r.gauge){
     const G=r.gauge,isRing=G.kind==='ring';
     insp.push([H(isRing?'Screw RING gauges (external)':'Screw PLUG gauges (internal)'),H('High ('+U+')'),H('Low ('+U+')')]);
-    if(G.iso){
+    if(G.iso && G.strict){
+      insp.push(['Convention','STRICT - on the limit, tolerance into the band (our rule, Emil 25.11.2026)','']);
+      insp.push(['GO gauge pitch ø — full form',N(G.goHi),N(G.goLo)]);
+      insp.push(['NOT GO gauge pitch ø — truncated',N(G.ngHi),N(G.ngLo)]);
+      insp.push(['Workpiece limit represented',N(G.goPd),N(G.ngPd)]);
+      insp.push(['Gauge tolerance (µm, into the band)',{v:+(G.Ts*1000).toFixed(1),s:S.n1},'']);
+      insp.push(['GO wear limit (the product limit itself)',N(G.goWear),'']);
+      insp.push(['NOT GO wear limit (its own make limit — withdraw past it)',N(G.ngWear),'']);
+      if(G.goMajHi!=null){
+        insp.push([]);
+        insp.push([H('Plug gauge crest / clearing ø — Table 12 geometry, strict'),H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO plug major ø (on D min, into the band)',N(G.goMajHi),N(G.goMajLo)]);
+        insp.push(['NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)',N(G.ngMajHi),N(G.ngMajLo)]);
+        if(G.clearMax!=null) insp.push(['Clearing ø max (D1 + EI − H/6)',N(G.clearMax),'']);
+      }
+      if(G.goMinHi!=null){
+        insp.push([]);
+        insp.push([H('Ring gauge crest / clearing ø — ISO 1502 Table 10 rows 1/11, crest strict'),H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO ring minor ø (on D1 − |es|, into the band)',N(G.goMinHi),N(G.goMinLo)]);
+        insp.push(['NOT GO ring minor ø (− 2F₁, F₁ = 0,1P)',N(G.ngMinHi),N(G.ngMinLo)]);
+        insp.push(['GO ring major ø (clearing) min = d − |es| + H/12 + T_PL','',N(G.ringClrGo)]);
+        insp.push(['NOT GO ring major ø (clearing) min = d − |es| + T_PL','',N(G.ringClrNg)]);
+      }
+      if(G.sPlainGoHi!=null){
+        insp.push([]);
+        insp.push([H('Plain '+(isRing?'ring/snap (major ø)':'plug (minor ø)')+' — strict'),H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO plain gauge',N(G.sPlainGoHi),N(G.sPlainGoLo)]);
+        insp.push(['NOT GO plain gauge',N(G.sPlainNgHi),N(G.sPlainNgLo)]);
+      }
+    } else if(G.iso){
+      insp.push(['Convention','ISO 1502:1996 placement','']);
       insp.push(['GO gauge pitch ø — full form',N(G.goHi),N(G.goLo)]);
       insp.push(['GO zone centre',N(G.goCentre),'']);
       insp.push(['NOT GO gauge pitch ø — truncated',N(G.ngHi),N(G.ngLo)]);
@@ -2051,11 +2459,20 @@ function exportRows(r){
       if(G.goMaj!=null){
         insp.push([]);
         insp.push([H('Plug gauge crest / clearing ø — ISO 1502 Table 12'),H('High ('+U+')'),H('Low ('+U+')')]);
-        insp.push(['GO plug major ø (D + EI + Z_PL)',N(G.goMaj+G.majTol/2),N(G.goMaj-G.majTol/2)]);
-        insp.push(['NOT GO plug major ø (+ 2F₁, F₁ = 0,1P)',N(G.ngMaj+G.majTol/2),N(G.ngMaj-G.majTol/2)]);
+        insp.push(['GO plug major ø (D + EI + Z_PL ± T_PL)',N(G.goMajHi),N(G.goMajLo)]);
+        insp.push(['NOT GO plug major ø (+ 2F₁, F₁ = 0,1P; ± T_PL)',N(G.ngMajHi),N(G.ngMajLo)]);
         if(G.clearMax!=null) insp.push(['Clearing ø max (D1 + EI − H/6)',N(G.clearMax),'']);
         insp.push(['F₁ = 0,1P (figures 7 & 8)',N(G.F1),'']);
         insp.push(['Clearance groove b₁ max = P/8 · radius r₁ max = 0,072P',N(G.b1max),N(G.r1max)]);
+      }
+      if(G.goMinHi!=null){
+        insp.push([]);
+        insp.push([H('Ring gauge crest / clearing ø — ISO 1502 Table 10 rows 1/11'),H('High ('+U+')'),H('Low ('+U+')')]);
+        insp.push(['GO ring minor ø (D1 − |es| ± T_R/2)',N(G.goMinHi),N(G.goMinLo)]);
+        insp.push(['NOT GO ring minor ø (d2 − |es| − T_d2 − T_R/2 − 2F₁ ± T_R)',N(G.ngMinHi),N(G.ngMinLo)]);
+        insp.push(['GO ring major ø (clearing) min = d − |es| + H/12 + T_PL','',N(G.ringClrGo)]);
+        insp.push(['NOT GO ring major ø (clearing) min = d − |es| + T_PL','',N(G.ringClrNg)]);
+        insp.push(['F₁ = 0,1P (figures 7 & 8)',N(G.F1),'']);
       }
     } else if(G.b12){
       insp.push(['GO gauge pitch ø — full form (B1.2 T4)',N(G.goHi),N(G.goLo)]);
@@ -2083,6 +2500,16 @@ function exportRows(r){
         insp.push(['NOT GO plain gauge',N(G.plainNgHi),N(G.plainNgLo)]);
         insp.push(['Plain gauge tolerance (Table 8)',N(G.plainTolB12),'']);
       }
+    } else {
+      insp.push(['GO gauge — full form, at maximum-material limit',N(G.goPd),'']);
+      insp.push(['NOT GO gauge — truncated, at least-material limit',N(G.ngPd),'']);
+      insp.push(['Plain GO '+(isRing?'(major ø)':'(minor ø)'),N(G.goPlain),'']);
+      insp.push(['Plain NOT GO',N(G.ngPlain),'']);
+    }
+    /* v8: the ISO 1502 Table 4–9 rows sat INSIDE the ASME B1.2 branch in v7, so a metric
+       export never carried them and an inch export printed them blank.  Moved here.     */
+    if(G.iso){
+     if(!G.strict){
       insp.push([]);
       insp.push([H('ISO 1502 Table 4 (workpiece PD tol = '+r.Tpd+' µm)'),H('Value (µm)')]);
       insp.push(['T_R  tolerance, screw ring gauges',{v:G.TR,s:S.n1}]);
@@ -2097,6 +2524,7 @@ function exportRows(r){
         insp.push(['GO gauge',{v:G.wGO,s:S.n1}]);
         insp.push(['NOT GO gauge',{v:G.wNG,s:S.n1}]);
       }
+     }
       if(G.flank){
         insp.push([]);
         insp.push([H('ISO 1502 Table 6 — tolerance on each flank angle'),H('Value (minutes)')]);
@@ -2108,7 +2536,7 @@ function exportRows(r){
       insp.push(['Gauge thread length <= 32 mm',{v:5,s:S.n1}]);
       insp.push(['Gauge thread length > 32 to 50 mm',{v:6,s:S.n1}]);
       insp.push(['Gauge thread length > 50 to 80 mm',{v:7,s:S.n1}]);
-      if(G.plainTol!=null){
+      if(G.plainTol!=null && !G.strict){
         insp.push([]);
         insp.push([H('ISO 1502 Table '+(ext?'8':'9')+' — plain GO gauge, '+(ext?'major':'minor')+' ø'),
                    H('High ('+U+')'),H('Low ('+U+')')]);
@@ -2117,17 +2545,25 @@ function exportRows(r){
         insp.push([(ext?'Z2':'Z1')+' offset (µm)',{v:G.plainZ,s:S.n1},'']);
         if(ext) insp.push(['Hp/2 check plug tolerance (µm)',{v:G.plainCheck,s:S.n1},'']);
       }
-    } else {
-      insp.push(['GO gauge — full form, at maximum-material limit',N(G.goPd),'']);
-      insp.push(['NOT GO gauge — truncated, at least-material limit',N(G.ngPd),'']);
-      insp.push(['Plain GO '+(isRing?'(major ø)':'(minor ø)'),N(G.goPlain),'']);
-      insp.push(['Plain NOT GO',N(G.ngPlain),'']);
     }
     if(G.tolManual!=null) insp.push(['Gauge PD tolerance (manual override)',N(G.tolManual),'']);
     if(G.wearManual!=null) insp.push(['Wear allowance (manual override)',N(G.wearManual),'']);
+    if(G.legalBand!=null){
+      const uA=(SYS==='iso')?1000:1e6;
+      insp.push([]);
+      insp.push([H('WHAT THIS GAUGE PAIR ACTUALLY ACCEPTS'),H('Value'),H('Unit')]);
+      insp.push(['Legal pitch-ø band',{v:+(G.legalBand*uA).toFixed(1),s:S.n1},MU]);
+      insp.push(['New GO can accept past the maximum-material limit',{v:+(G.goEsc*uA).toFixed(1),s:S.n1},MU]);
+      insp.push(['New NOT GO can accept past the least-material limit',{v:+(G.ngEsc*uA).toFixed(1),s:S.n1},MU]);
+      if(G.goWearEsc!=null) insp.push(['Fully worn GO accepts past the limit',{v:+(G.goWearEsc*uA).toFixed(1),s:S.n1},MU]);
+      insp.push(['Widest window the pair passes',{v:+(G.widest*uA).toFixed(1),s:S.n1},MU]);
+      insp.push(['Narrowest window the shop must hold',{v:+(G.shop*uA).toFixed(1),s:S.n1},MU]);
+    }
     insp.push([]);
   }
-  insp.push([{v:'Gauge data from ISO 1502:1996 Tables 4-9 (metric threads only). GO zone placement uses the standard\'s symbol definitions for Z_PL and Z_R with the sign fixed by Table 4 note 1. The NOT GO zone placement is ASSUMED (no Z offset is defined for NOT GO gauges) and needs clause 13 / Table 10 to confirm.',s:S.note}]);
+  insp.push([{v:(r.gauge&&r.gauge.strict
+    ? 'STRICT convention (our rule, Emil 25.11.2026): every gauge ON its workpiece limit, tolerance applied INTO the band (ASME B1.2 Table 4 placement); GO wear limit = the product limit, NOT GO withdrawn once worn out of its make tolerance. Not tabulated for metric threads. Thread form still per ISO 1502 Tables 6-7. '
+    : '')+'ISO 1502:1996 placement (when selected): GO zone from the symbol definitions of Z_PL / Z_R with the sign fixed by Table 4 note 1; NOT GO zone from clause 13 with Table 12 (plugs) / Table 10 (rings) - it lies wholly OUTSIDE the workpiece band, so a new NOT GO can pass a thread up to T_PL / T_R past the limit.',s:S.note}]);
   insp.push([{v:'Wire measurement M = d2 + W(1+cosec a) - (P/2)cot a = d2 + 3W - H for a=30deg. Optional lead-angle term +0,75*W*tan^2(lambda) is the Machinery\'s Handbook form and is NOT traceable to a primary standard here.',s:S.note}]);
 
   const sheets=[{name:'Summary',rows:summary,widths:[44,16,14,14,12]},
@@ -2191,6 +2627,41 @@ function exportRows(r){
       pl.push(['NOT GO gauge pitch diameter (truncated)',N(PG.ngHi),N(PG.ngLo)]);
       pl.push([(after?'Pre-plate':'As-plated')+' limit represented (GO col / NOT GO col — not max|min)',N(PG.goPd),N(PG.ngPd)]);
       if(PG.TdispUm!=null) pl.push(['Gauge tolerance',{v:+PG.TdispUm.toFixed(1),s:S.n1},MU]);
+      {
+        const sg=((!ext&&after)||(ext&&!after))?' + ':' - ';
+        const tU=v=>(v*p.u).toFixed(1)+' '+MU;
+        const goF=ext?L.pdMax:L.pdMin, ngF=ext?L.pdMin:L.pdMax;
+        const dpN=Math.max(4,parseInt($('dp').value,10)||4);
+        const fx=v=>(v==null?'-':(v*uf()).toFixed(dpN));
+        const mN=Math.pow(10,dpN);
+        const xU=v=>(v==null?'-':(Math.ceil(v*uf()*mN-1e-6)/mN).toFixed(dpN));    /* a minimum, into the band */
+        const xD=v=>(v==null?'-':(Math.floor(v*uf()*mN+1e-6)/mN).toFixed(dpN));   /* a maximum, into the band */
+        pl.push([]);
+        pl.push([H('HOW THE PLATING SETS EACH LIMIT - GO by t_max, NOT GO by t_min'),H('Derivation'),H('')]);
+        pl.push(['GO pitch ø limit',fx(goF)+sg+'4 x '+tU(p.tmax)+' = '+(ext?xD:xU)(PG.goPd),'']);
+        pl.push(['NOT GO pitch ø limit',fx(ngF)+sg+'4 x '+tU(p.tmin)+' = '+(ext?xU:xD)(PG.ngPd),'']);
+        if(PG.plainGoHi!=null){
+          const cGoF=ext?L.majMax:L.minMin, cNgF=ext?L.majMin:L.minMax;
+          pl.push(['GO '+(ext?'major':'minor')+' ø limit (crest, 2t)',fx(cGoF)+sg+'2 x '+tU(p.tmax)+' = '+(ext?xD:xU)(ext?p.cdMax:p.cdMin),'']);
+          pl.push(['NOT GO '+(ext?'major':'minor')+' ø limit (crest, 2t)',fx(cNgF)+sg+'2 x '+tU(p.tmin)+' = '+(ext?xU:xD)(ext?p.cdMin:p.cdMax),'']);
+        }
+      }
+      if(PG.goMinHi!=null){
+        pl.push([]);
+        pl.push([H('Ring gauge crest / clearing ø — Table 10 rows 1/11 on the pre-plate band'),H('Max'),H('Min')]);
+        pl.push(['GO ring minor ø (on the root reference d1 − |es| − 2·t_max, into the band)',N(PG.goMinHi),N(PG.goMinLo)]);
+        pl.push(['NOT GO ring minor ø (− 2F₁)',N(PG.ngMinHi),N(PG.ngMinLo)]);
+        if(PG.ringClrGo!=null){
+          pl.push(['GO ring major ø (clearing) min','',N(PG.ringClrGo)]);
+          pl.push(['NOT GO ring major ø (clearing) min','',N(PG.ringClrNg)]);
+        }
+      }
+      if(PG.plainGoHi!=null){
+        pl.push([]);
+        pl.push([H('Plain gauges for the '+(isRingP?'major':'minor')+' ø — same convention'),H('Max'),H('Min')]);
+        pl.push(['Plain GO '+(isRingP?'ring / snap':'plug'),N(PG.plainGoHi),N(PG.plainGoLo)]);
+        pl.push(['Plain NOT GO '+(isRingP?'ring / snap':'plug'),N(PG.plainNgHi),N(PG.plainNgLo)]);
+      }
       if(PG.iso){
         pl.push(['GO zone centre',N(PG.goCentre)]);
         pl.push(['NOT GO zone centre',N(PG.ngCentre)]);
@@ -2212,11 +2683,12 @@ function exportRows(r){
       pl.push([]);
       if(PG.wearIsLimit){
         pl.push(['GO wear limit (set by us — the product limit itself)',N(PG.goWear)]);
+        if(PG.ngWear!=null) pl.push(['NOT GO wear limit (set by us — its own make limit; withdraw past it)',N(PG.ngWear)]);
         pl.push(['Note','No tabulated wear allowance exists for this convention; state the wear limit on the gauge drawing','']);
       } else if(PG.goWear!=null){
         pl.push(['GO wear limit (ISO 1502 Table 5, W = '+PG.wGO+' um)',N(PG.goWear)]);
         pl.push(['  worn GO accepts past the limit',{v:+((PG.goWearEsc||0)*p.u).toFixed(1),s:S.n1},MU]);
-        pl.push(['NOT GO wear limit (W = '+PG.wNG+' um) — wears toward over-rejection',N(PG.ngWear)]);
+        pl.push(['NOT GO wear limit (W = '+PG.wNG+' um) — wear shrinks the escape, never removes it',N(PG.ngWear)]);
       }
       pl.push([]);
       pl.push([{v:'SOURCE STATUS — DERIVED, NOT TABULATED. Neither ISO 1502 nor ASME B1.2 covers gauging a '+
@@ -2251,12 +2723,133 @@ function exportRows(r){
     [{v:'CHECKED - UN tolerance formulae (ASME B1.1 sec.5, cited by H28/2B 5.2.2) reproduce published limits for 1/4-20, 3/8-16, 1/2-13, 3/4-10 and 1-8 UNC: 39 of 40 values exact.',s:S.note}],
     [{v:'VERIFIED - ISO 1502:1996 Tables 4-9 transcribed: gauge tolerances T_R/T_PL/T_CP, values m/Z_R/Z_PL, permissible wear, flank-angle and pitch tolerances, and plain-gauge tolerances.',s:S.note}],
     [{v:'DERIVED - GO gauge zone placement, from the ISO 1502 symbol definitions of Z_PL and Z_R plus the sign rule in Table 4 note 1.',s:S.note}],
-    [{v:'ASSUMED - NOT GO gauge zone placement (against the least-material limit, extending inward). No Z offset is defined for NOT GO gauges; needs ISO 1502 clause 13 / Table 10 to confirm.',s:S.note}],
+    [{v:'VERIFIED - NOT GO gauge zone placement, ISO 1502 clause 13 with Table 12 (plugs) and Table 10 rows 12/16 (rings): the zone lies wholly OUTSIDE the workpiece band (D2max ... D2max + T_PL; d2min - T_R ... d2min). (v7 and earlier printed "ASSUMED" here - stale since 19.08.2026.)',s:S.note}],
+    [{v:'VERIFIED (v11, 25.11.2026) - screw RING gauge crest and clearing diameters from ISO 1502:1996 Table 10 rows 1 and 11, read from the standard: GO ring minor = D1 - |es| +/- T_R/2, major (clearing) min = d - |es| + H/12 + T_PL; NOT GO ring minor = d2 - |es| - T_d2 - T_R/2 - 2F1 +/- T_R, major (clearing) min = d - |es| + T_PL. Footnote 1: ring sizes valid when rings are measured rather than made to check plugs - agree with the gauge maker.',s:S.note}],
+    [{v:'OUR RULE (v8, Emil 25.11.2026) - STRICT finished-size gauges and convention C pre-plate gauges: gauge ON the workpiece limit, tolerance INTO the band (ASME B1.2 Table 4 placement applied to metric threads); GO wear limit = the product limit; NOT GO withdrawn once worn out of its make tolerance. Not tabulated by any standard for metric threads.',s:S.note}],
     [{v:'NOT VERIFIED - lead-angle correction term (Machinery\'s Handbook form). Off by default.',s:S.note}],
-    [{v:'NOT COVERED - Unified inch gauges (ASME B1.2). ISO 1502 data applies to metric threads only.',s:S.note}]
+    [{v:'VERIFIED - Unified inch gauges: ASME B1.2-1983 Table 4 placement, Table 6 class X and Table 8 plain-gauge tolerances (4/4 against B1.2 own 1/4-20 examples). ISO 1502 data applies to metric threads only.',s:S.note}]
   ];
   sheets.push({name:'Sources',rows:ref,widths:[46,22,30]});
   return sheets;
+}
+/* ══════════════════════════════════════════════════════════════════════════════
+   CREO CSV TABLES — v8, Emil 25.11.2026
+   "Creo accepts the CSV tables … a CSV table for the thread itself and for the gauges
+   post and pre plate separately … just a few informations."
+   kind: 'thread' | 'gauge' | 'gaugePre'.  Returns the CSV text, or null with a reason.
+   ROUNDING — deliberate, and different per table:
+     finished thread limits   nearest, at the Decimals setting: what ISO 965 prints and
+                              what a drawing carries.
+     pre-plate thread limits  INTO the band (max down, min up) at the Decimals setting:
+                              these are shop limits no standard prints, and rounding them
+                              outward would widen the band.
+     every gauge limit        INTO its zone at max(Decimals, 4): a gauge drawing must never
+                              be rounded into an escape (the 13.442481 → 13.442 lesson).
+   ASCII only: Creo's table import is not trusted with ø / µ / × here.               */
+function creoCsv(kind,r){
+  const dpSel=parseInt($('dp').value,10)||3, k=uf(), U=uName();
+  const MU=(SYS==='iso')?'um':'uin', uu=(SYS==='iso')?1000:1e6;
+  const gdp=Math.max(dpSel, SYS==='iso'?4:5);   /* inch: B1.2 plain tolerances are 0,00004 in */
+  const nT=v=>(v==null||!isFinite(v))?'-':(v*k).toFixed(dpSel);
+  const rnd=(v,dp,dir)=>{ if(v==null||!isFinite(v)) return '-'; const m=Math.pow(10,dp), x=v*k*m;
+    return ((dir>0?Math.ceil(x-1e-6):Math.floor(x+1e-6))/m).toFixed(dp); };
+  const pUp=v=>rnd(v,dpSel,1), pDn=v=>rnd(v,dpSel,-1);     /* pre-plate thread limits */
+  const gUp=v=>rnd(v,gdp,1),   gDn=v=>rnd(v,gdp,-1);       /* gauge limits             */
+  const asc=s=>String(s).replace(/×/g,'x').replace(/ø/g,'dia').replace(/µ/g,'u')
+                        .replace(/[−–—]/g,'-').replace(/[^\x20-\x7E]/g,'');
+  /* no quoted cells for Creo: a comma inside a text cell becomes ';', a quote is dropped */
+  const q=v=>asc(v==null?'':v).replace(/,/g,';').replace(/"/g,'');
+  const ext=r.ext, L=r.lim, p=r.plat, after=p&&p.mode==='after';
+  const tolPd = SYS==='iso'?r.Tpd:Math.round(r.Tpd*1e6), tolCd = SYS==='iso'?r.Tcd:Math.round(r.Tcd*1e6);
+  const pitchTxt = SYS==='iso' ? ['Pitch P ('+U+')', (r.P*k).toFixed(dpSel)]
+                               : ['Threads per inch', fmtP(Math.round(1/r.P*1000)/1000)];
+  const rows=[];
+
+  if(kind==='thread'){
+    /* v10 (Emil 25.11.2026): the thread table goes on a drawing — keep it small.  No pitch-ø /
+       crest-ø tolerance rows, no "class applies" row; with no plating (mode off OR a zero
+       coating) the pre-plate columns and the coating row are LEFT OUT, never printed as 0.  */
+    const pp = !!p && p.tmax>0;
+    const preLab = after?'Pre-plate':'As-plated';
+    rows.push(pp?['Parameter','Max','Min',preLab+' max',preLab+' min']:['Parameter','Max','Min']);
+    rows.push(['Designation',r.desig]);
+    rows.push(['Thread type',ext?'External':'Internal']);
+    rows.push(pitchTxt);
+    rows.push(['Tolerance class',r.clsStr]);
+    if(ext){
+      rows.push(['Major dia d ('+U+')',nT(L.majMax),nT(L.majMin)].concat(pp?[pDn(p.cdMax),pUp(p.cdMin)]:[]));
+      rows.push(['Pitch dia d2 ('+U+')',nT(L.pdMax),nT(L.pdMin)].concat(pp?[pDn(p.pdMax),pUp(p.pdMin)]:[]));
+      rows.push(['Minor dia d3 ('+U+') single value',nT(L.minVal),'-'].concat(pp?['-','-']:[]));
+    } else {
+      rows.push(['Major dia D ('+U+')','-',nT(L.majMin)].concat(pp?['-',pUp(p.rootMin)]:[]));
+      rows.push(['Pitch dia D2 ('+U+')',nT(L.pdMax),nT(L.pdMin)].concat(pp?[pDn(p.pdMax),pUp(p.pdMin)]:[]));
+      rows.push(['Minor dia D1 ('+U+')',nT(L.minMax),nT(L.minMin)].concat(pp?[pDn(p.cdMax),pUp(p.cdMin)]:[]));
+    }
+    if(pp) rows.push(['Coating thickness ('+MU+')',(p.tmax*p.u).toFixed(1),(p.tmin*p.u).toFixed(1)]);
+  }
+
+  else if(kind==='gauge' || kind==='gaugePre'){
+    const pre = kind==='gaugePre';
+    const G = pre ? r.platGauge : r.gauge;
+    if(!G) return {err: pre ? 'Plating is off, so there are no pre-plate gauges. Set Coating compensation in section 03.'
+                            : 'No gauge data for this thread.'};
+    const ring = G.kind==='ring', g = ring?'screw ring':'screw plug';
+    const conv = pre ? (G.taylor?'C - on the limit / tolerance into the band':G.b12?'ASME B1.2 class X':G.iso?'A - ISO 1502 placement':'-')
+                     : (G.strict?'Strict - on the limit / tolerance into the band':G.iso?'ISO 1502 placement':G.b12?'ASME B1.2 Table 4':'target sizes only');
+    const Tg = pre ? G.T : (G.strict ? G.Ts : (G.tolManual!=null ? G.tolManual
+                                       : (G.iso ? (ring?G.TR:G.TPL)/1000 : (G.b12?G.xPd:null))));
+    /* a plug wears SMALLER, so its wear limit is a minimum; a ring wears LARGER — a maximum */
+    const wear = (lab,v)=> v==null ? null : (ring ? [lab,gDn(v),''] : [lab,'',gUp(v)]);
+    rows.push(['Parameter','Max','Min']);
+    rows.push(['Designation',r.desig]);
+    rows.push(['Gauge set', pre ? (after?'Pre-plate (before plating)':'As-plated') : (p?'Finished (plated) size':'Finished size')]);
+    rows.push(['Convention',conv]);
+    rows.push(pitchTxt);
+    if(Tg!=null) rows.push(['Gauge tolerance ('+MU+')',(Tg*uu).toFixed(1)]);
+    if(pre){
+      rows.push(['Coating thickness ('+MU+')',(p.tmax*p.u).toFixed(1),(p.tmin*p.u).toFixed(1)]);
+      rows.push(['Class applies',after?'after plating':'before plating']);
+      rows.push([(after?'Pre-plate':'As-plated')+' pitch dia ('+U+')',pDn(p.pdMax),pUp(p.pdMin)]);
+      rows.push([(after?'Pre-plate':'As-plated')+' '+(ext?'major':'minor')+' dia ('+U+')',pDn(p.cdMax),pUp(p.cdMin)]);
+      if(p.rootMin!=null) rows.push([(after?'Pre-plate':'As-plated')+' major dia min ('+U+')','',pUp(p.rootMin)]);
+    }
+    rows.push(['GO '+g+' - pitch dia ('+U+')',gDn(G.goHi),gUp(G.goLo)]);
+    if(G.goMajHi!=null) rows.push(['GO '+g+' - major dia ('+U+')',gDn(G.goMajHi),gUp(G.goMajLo)]);
+    if(G.goMinHi!=null) rows.push(['GO '+g+' - minor dia ('+U+')',gDn(G.goMinHi),gUp(G.goMinLo)]);
+    if(G.ringClrGo!=null) rows.push(['GO '+g+' - major dia (clearing) min ('+U+')','',gUp(G.ringClrGo)]);
+    const w1=wear('GO '+g+' - pitch dia wear limit ('+U+')',G.goWear); if(w1) rows.push(w1);
+    rows.push(['NOT GO '+g+' - pitch dia ('+U+')',gDn(G.ngHi),gUp(G.ngLo)]);
+    if(G.ngMajHi!=null) rows.push(['NOT GO '+g+' - major dia ('+U+')',gDn(G.ngMajHi),gUp(G.ngMajLo)]);
+    if(G.ngMinHi!=null) rows.push(['NOT GO '+g+' - minor dia ('+U+')',gDn(G.ngMinHi),gUp(G.ngMinLo)]);
+    if(G.ringClrNg!=null) rows.push(['NOT GO '+g+' - major dia (clearing) min ('+U+')','',gUp(G.ringClrNg)]);
+    const w2=wear('NOT GO '+g+' - pitch dia wear limit ('+U+')',G.ngWear); if(w2) rows.push(w2);
+    if(G.clearMax!=null) rows.push(['Screw plug - minor dia (clearing) max ('+U+')',gDn(G.clearMax),'']);
+    const pl=(ring?'ring / snap - major':'plug - minor')+' dia ('+U+')';
+    if(pre){
+      if(G.plainGoHi!=null){ rows.push(['Plain GO '+pl,gDn(G.plainGoHi),gUp(G.plainGoLo)]);
+                             rows.push(['Plain NOT GO '+pl,gDn(G.plainNgHi),gUp(G.plainNgLo)]); }
+    } else if(G.strict){
+      if(G.sPlainGoHi!=null){ rows.push(['Plain GO '+pl,gDn(G.sPlainGoHi),gUp(G.sPlainGoLo)]);
+                              rows.push(['Plain NOT GO '+pl,gDn(G.sPlainNgHi),gUp(G.sPlainNgLo)]); }
+    } else if(G.iso){
+      if(G.plainHi!=null) rows.push(['Plain GO '+pl,gDn(G.plainHi),gUp(G.plainLo)]);
+    } else if(G.b12){
+      if(G.plainGoHi!=null){ rows.push(['Plain GO '+pl,gDn(G.plainGoHi),gUp(G.plainGoLo)]);
+                             rows.push(['Plain NOT GO '+pl,gDn(G.plainNgHi),gUp(G.plainNgLo)]); }
+    }
+  }
+  return {text: csvRect(rows.map(row=>row.map(q)))};
+}
+/* ⚠ CREO RULE (Emil 25.11.2026): Creo refuses a CSV whose rows have different numbers of
+   columns ("some rows have more columns than others").  v8's first Creo tables had 2-column
+   info rows under a 3- or 5-column header and were rejected.  EVERY CSV this tool writes goes
+   through csvRect(): each row is padded with empty cells to the widest row, and the result is
+   checked before it is returned.  Never build a CSV string by hand.                        */
+function csvRect(rows){
+  const W=Math.max(1,...rows.map(r=>r.length));
+  const out=rows.map(r=>r.concat(Array(W-r.length).fill('')));
+  if(!out.every(r=>r.length===W)) throw new Error('csvRect: ragged rows survived padding');
+  return out.map(r=>r.join(',')).join('\r\n')+'\r\n';
 }
 function fileBase(r){
   const base = SYS==='iso' ? ('M'+fmtP(r.D)+'x'+fmtP(r.P)) : (fmtP(r.D)+'-'+fmtP(Math.round(1/r.P)));
@@ -2296,6 +2889,7 @@ function syncSystem(){
   const iso=SYS==='iso';
   $('isoCls').style.display=iso?'':'none';
   $('unCls').style.display=iso?'none':'';
+  $('fgWrap').classList.toggle('na',!iso);   /* v8: UN always uses ASME B1.2 Table 4 */
   $('lblDnom').textContent='Basic major diameter D, d ('+(iso?'mm':'in')+')';
   $('lblPitch').textContent=iso?'Pitch P (mm)':'Threads per inch (tpi)';
   $('lblEngMan').textContent='Engagement length ('+(iso?'mm':'in')+')';
@@ -2339,7 +2933,7 @@ const FIELD_IDS=['preset','dnom','pitch','ttype','starts','hand','dunit','dp',
                  'pdGrade','pdPos','cdGrade','cdPos','unClass','unForm',
                  'engMode','engMan','platMode','tmin','tmax',
                  'pctThread','drillSet','leadCorr','wireMode','wireMan',
-                 'gTol','gWear','pgMode','pgTol'];
+                 'gTol','gWear','pgMode','pgTol','fgMode','fgTol'];
 
 /* Excluded from the FINGERPRINT only — never from the restore set.  Decimal places and
    display unit change how a number is PRINTED, not one computed limit, so treating them
@@ -2388,7 +2982,9 @@ function histSummary(f){
     coat=' · COAT '+(f.tmin||'?')+'–'+(f.tmax||'?')+' µm '+(f.platMode==='after'?'(class after)':'(class before)');
     gauge=' · GAUGE '+(f.pgMode==='taylor'?('C @ '+(f.pgTol||'?')+' µm'):'A (ISO 1502)');
   }
-  return (iso?'ISO M':'UN inch')+' · '+(ext?'ext':'int')+' · '+size+' - '+cls+starts+lh+coat+gauge;
+  /* v8: entries saved before v8 carry no fgMode — they were computed with ISO 1502 */
+  const fin = iso ? ' · FINISHED '+((f.fgMode||'iso')==='strict'?('STRICT @ '+(f.fgTol||'?')+' µm'):'ISO 1502') : '';
+  return (iso?'ISO M':'UN inch')+' · '+(ext?'ext':'int')+' · '+size+' - '+cls+starts+lh+coat+gauge+fin;
 }
 
 /* kind: what produced the entry ('calc', 'xlsx', 'csv', 'manual').
@@ -2466,6 +3062,11 @@ function histRestore(id){
   syncSystem();
 
   FIELD_IDS.forEach(k=>{ const el=$(k); if(el&&f[k]!==undefined&&f[k]!==null) el.value=f[k]; });
+  /* v8: an entry saved before v8 has no fgMode.  It was computed with ISO 1502, so it must
+     LOAD as ISO 1502 — leaving the select on today's default (strict) would show different
+     finished-gauge numbers under an old entry's name.                                    */
+  if(f.fgMode===undefined||f.fgMode===null) $('fgMode').value='iso';
+  if(f.fgTol===undefined||f.fgTol===null)   $('fgTol').value='8';
 
   $('histNote').value=e.note||'';
   $('lblWire').textContent='Wire diameter ('+$('dunit').value+')';
@@ -2542,9 +3143,9 @@ window.addEventListener('DOMContentLoaded',()=>{
     $('dnom').value=d; $('pitch').value=p; render();
   });
   $('ttype').addEventListener('change',()=>{refreshClassOptions();render();});
-  ['dnom','pitch','starts','engMan','tmin','tmax','pctThread','wireMan','gTol','gWear','pgTol'].forEach(id=>
+  ['dnom','pitch','starts','engMan','tmin','tmax','pctThread','wireMan','gTol','gWear','pgTol','fgTol'].forEach(id=>
     $(id).addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(render,220);}));
-  ['pdGrade','pdPos','cdGrade','cdPos','unClass','unForm','hand','dp','dunit','drillSet','leadCorr','pgMode'].forEach(id=>
+  ['pdGrade','pdPos','cdGrade','cdPos','unClass','unForm','hand','dp','dunit','drillSet','leadCorr','pgMode','fgMode'].forEach(id=>
     $(id).addEventListener('change',render));
   $('dunit').addEventListener('change',()=>{$('lblWire').textContent='Wire diameter ('+$('dunit').value+')';});
   $('platMode').addEventListener('change',()=>{syncPlat();render();});
@@ -2562,19 +3163,30 @@ window.addEventListener('DOMContentLoaded',()=>{
     saveBlob(buildXlsx(exportRows(r)), fileBase(r)+'.xlsx');
     histRecord('xlsx',false);
   });
+  /* v8 — the three short Creo tables */
+  [['csvThread','thread','_thread'],['csvGauge','gauge','_gauges_finished'],['csvGaugePre','gaugePre','_gauges_preplate']]
+    .forEach(([id,kind,suffix])=>$(id).addEventListener('click',()=>{
+      const r=LAST||compute();
+      if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
+      const out=creoCsv(kind,r);
+      if(!out||out.err){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">'+xesc(out?out.err:'Export failed.')+'</span>';return; }
+      saveBlob(new Blob([out.text],{type:'text/csv'}), fileBase(r)+suffix+'.csv');
+      histRecord('csv',false);
+    }));
   $('csv').addEventListener('click',()=>{
     const r=LAST||compute();
     if(r.err||!r.ok){ $('saveMsg').innerHTML='<span class="flag err" style="display:block">Nothing to export — resolve the errors first.</span>';return; }
-    const lines=[];
+    /* v8.1: every row padded to the same width via csvRect() — see the CREO RULE there */
+    const rows=[];
     exportRows(r).forEach(sh=>{
-      lines.push('### '+sh.name);
-      sh.rows.forEach(row=>lines.push(row.map(c=>{
+      rows.push(['### '+sh.name]);
+      sh.rows.forEach(row=>rows.push(row.map(c=>{
         let v=(c&&typeof c==='object')?c.v:c; if(v==null)v=''; v=String(v);
         return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
-      }).join(',')));
-      lines.push('');
+      })));
+      rows.push([]);
     });
-    saveBlob(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}), fileBase(r)+'.csv');
+    saveBlob(new Blob(['﻿'+csvRect(rows)],{type:'text/csv;charset=utf-8'}), fileBase(r)+'.csv');
     histRecord('csv',false);
   });
 
